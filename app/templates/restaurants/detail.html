@@ -1,0 +1,241 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ restaurant.name }} - 餐饮信息管理系统{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- 餐厅信息 -->
+    <div class="col-md-8">
+        <div class="card mb-4">
+            {% if restaurant.img_url %}
+            <img src="{{ restaurant.img_url }}" class="card-img-top" alt="{{ restaurant.name }}" style="height: 300px; object-fit: cover;">
+            {% else %}
+            <img src="{{ url_for('static', filename='images/1.jpg') }}" class="card-img-top" alt="餐厅默认图片" style="height: 300px; object-fit: cover;">
+            {% endif %}
+            <div class="card-body">
+                <h1>{{ restaurant.name }}</h1>
+                <p><strong>类型:</strong> {{ restaurant.type }}</p>
+                <p><strong>地址:</strong> {{ restaurant.address }}</p>
+                <p><strong>电话:</strong> {{ restaurant.phone }}</p>
+                <p><strong>营业时间:</strong> {{ restaurant.opening_hours }}</p>
+                <p><strong>评分:</strong> 
+                    {% if restaurant.rating %}
+                        {{ "%.1f"|format(restaurant.rating) }}/10 
+                        <small>({{ restaurant.review_count }} 条评论)</small>
+                    {% else %}
+                        暂无评分
+                    {% endif %}
+                </p>
+                <p><strong>收藏数:</strong> {{ restaurant.star_count }}</p>
+            </div>
+        </div>
+
+        <!-- 菜品列表 -->
+        {% if dishes %}
+        <div class="card mb-4">
+            <div class="card-header">
+                <h3>菜品推荐</h3>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    {% for dish in dishes %}
+                    <div class="col-md-6 mb-3">
+                        <div class="card">
+                            {% if dish.img_url %}
+                            <img src="{{ dish.img_url }}" class="card-img-top" alt="{{ dish.name }}" style="height: 150px; object-fit: cover;">
+                            {% else %}
+                            <img src="{{ url_for('static', filename='images/2.jpg') }}" class="card-img-top" alt="菜品默认图片" style="height: 150px; object-fit: cover;">
+                            {% endif %}
+                            <div class="card-body">
+                                <h6 class="card-title">{{ dish.name }}</h6>
+                                <p class="card-text">
+                                    <strong>价格:</strong> ¥{{ "%.2f"|format(dish.price) }}<br>
+                                    <small>{{ dish.description or '暂无描述' }}</small><br>
+                                    <small class="text-success">推荐数: <span id="rec-count-{{ dish.dish_id }}">{{ dish.rec_count }}</span></small>
+                                </p>
+                                {% if current_user.is_authenticated and current_user.user_type == 'user' %}
+                                <button class="btn btn-sm {% if dish.user_recommended %}btn-success{% else %}btn-outline-success{% endif %}" 
+                                        id="rec-btn-{{ dish.dish_id }}" 
+                                        onclick="recommendDish({{ dish.dish_id }})">
+                                    {% if dish.user_recommended %}已推荐{% else %}推荐菜品{% endif %}
+                                </button>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- 评论区 -->
+        <div class="card">
+            <div class="card-header">
+                <h3>用户评论</h3>
+            </div>
+            <div class="card-body">
+                <!-- 发表评论表单 -->
+                {% if current_user.is_authenticated and current_user.user_type == 'user' %}
+                <form method="POST" action="{{ url_for('review.post_review', rest_id=restaurant.rest_id) }}" class="mb-4">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                    <div class="mb-3">
+                        <label for="rating" class="form-label">评分 (1-10)</label>
+                        <select class="form-control" id="rating" name="rating" required>
+                            <option value="">请选择评分</option>
+                            {% for i in range(1, 11) %}
+                            <option value="{{ i }}">{{ i }}分</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="comment" class="form-label">评论内容</label>
+                        <textarea class="form-control" id="comment" name="comment" rows="3" required></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary">发表评论</button>
+                </form>
+                <hr>
+                {% endif %}
+
+                <!-- 评论列表 -->
+                {% if reviews %}
+                {% for review in reviews %}
+                <div class="mb-3 border-bottom pb-3">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h6>{{ review.username }}</h6>
+                            <span class="badge bg-primary">{{ review.rating }}/10</span>
+                            <small class="text-muted ms-2">{{ review.review_time.strftime('%Y-%m-%d %H:%M') }}</small>
+                        </div>
+                        <!-- 用户自己的评论显示编辑/删除按钮 -->
+                        {% if current_user.is_authenticated and current_user.id == review.user_id %}
+                        <div class="btn-group btn-group-sm">
+                            <a href="{{ url_for('review.edit_review', review_id=review.review_id) }}" class="btn btn-outline-primary">编辑</a>
+                            <form method="POST" action="{{ url_for('review.delete_review', review_id=review.review_id) }}" style="display: inline;" onsubmit="return confirm('确定要删除这条评论吗？')">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                <button type="submit" class="btn btn-outline-danger">删除</button>
+                            </form>
+                        </div>
+                        {% endif %}
+                    </div>
+                    <p class="mt-2">{{ review.comment }}</p>
+                    
+                    <!-- 商家回复区域 -->
+                    {% if review.replies %}
+                    {% for reply in review.replies %}
+                    <div class="ms-4 mt-2 p-2 bg-light rounded">
+                        <small class="text-muted">商家回复 ({{ reply.reply_time.strftime('%Y-%m-%d %H:%M') }}):</small>
+                        <p class="mb-0">{{ reply.content }}</p>
+                    </div>
+                    {% endfor %}
+                    {% endif %}
+                    
+                    <!-- 商家回复表单 -->
+                    {% if current_user.is_authenticated and current_user.user_type == 'merchant' %}
+                    <div class="ms-4 mt-2">
+                        <form method="POST" action="{{ url_for('review.reply_review', review_id=review.review_id) }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                            <div class="input-group input-group-sm">
+                                <input type="text" class="form-control" name="reply_content" placeholder="商家回复..." required>
+                                <button type="submit" class="btn btn-outline-secondary">回复</button>
+                            </div>
+                        </form>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+                {% else %}
+                <p class="text-muted">暂无评论</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- 侧边栏 -->
+    <div class="col-md-4">
+        {% if current_user.is_authenticated and current_user.user_type == 'user' %}
+        <div class="card">
+            <div class="card-body">
+                <h5>操作</h5>
+                <button class="btn {% if is_favorited %}btn-warning{% else %}btn-outline-primary{% endif %} btn-sm d-block w-100" 
+                        id="favorite-btn" 
+                        onclick="toggleFavorite({{ restaurant.rest_id }})">
+                    {% if is_favorited %}取消收藏{% else %}收藏餐厅{% endif %}
+                </button>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+function toggleFavorite(restId) {
+    fetch('/restaurant/toggle_favorite', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token() }}'
+        },
+        body: JSON.stringify({rest_id: restId})
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const btn = document.getElementById('favorite-btn');
+            if (data.action === 'added') {
+                btn.textContent = '取消收藏';
+                btn.className = 'btn btn-warning btn-sm d-block w-100';
+                alert('收藏成功！');
+            } else {
+                btn.textContent = '收藏餐厅';
+                btn.className = 'btn btn-outline-primary btn-sm d-block w-100';
+                alert('取消收藏成功！');
+            }
+        } else {
+            alert('操作失败：' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('操作失败');
+    });
+}
+
+function recommendDish(dishId) {
+    fetch('/review/recommend_dish', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token() }}'
+        },
+        body: JSON.stringify({dish_id: dishId})
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const btn = document.getElementById('rec-btn-' + dishId);
+            const countSpan = document.getElementById('rec-count-' + dishId);
+            let currentCount = parseInt(countSpan.textContent);
+            
+            if (data.action === 'added') {
+                btn.textContent = '已推荐';
+                btn.className = 'btn btn-sm btn-success';
+                countSpan.textContent = currentCount + 1;
+                alert('推荐成功！');
+            } else {
+                btn.textContent = '推荐菜品';
+                btn.className = 'btn btn-sm btn-outline-success';
+                countSpan.textContent = Math.max(0, currentCount - 1);
+                alert('取消推荐成功！');
+            }
+        } else {
+            alert('操作失败：' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('操作失败');
+    });
+}
+</script>
+{% endblock %}

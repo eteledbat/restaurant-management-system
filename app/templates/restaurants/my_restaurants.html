@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+
+{% block title %}我的餐厅 - 餐饮信息管理系统{% endblock %}
+
+{% block content %}
+<h2 class="mb-4">我的餐厅</h2>
+
+{% if restaurants %}
+<div class="row">
+    {% for restaurant in restaurants %}
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            {% if restaurant.img_url %}
+            <img src="{{ restaurant.img_url }}" class="card-img-top" alt="{{ restaurant.name }}" style="height: 200px; object-fit: cover;">
+            {% endif %}
+            <div class="card-body">
+                <h5 class="card-title">{{ restaurant.name }}</h5>
+                <p class="card-text">
+                    <strong>类型:</strong> {{ restaurant.type }}<br>
+                    <strong>评分:</strong> 
+                    {% if restaurant.rating %}
+                        {{ "%.1f"|format(restaurant.rating) }}/10 
+                        <small>({{ restaurant.review_count }} 条评论)</small>
+                    {% else %}
+                        暂无评分
+                    {% endif %}<br>
+                    <strong>收藏数:</strong> {{ restaurant.star_count }}
+                </p>
+                <a href="{{ url_for('restaurant.detail', rest_id=restaurant.rest_id) }}" class="btn btn-primary">查看详情</a>
+                <button class="btn btn-outline-secondary">管理菜品</button>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="text-center">
+    <p class="text-muted">您还没有管理任何餐厅</p>
+</div>
+{% endif %}
+{% endblock %}

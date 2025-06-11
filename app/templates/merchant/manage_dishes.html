@@ -1,0 +1,192 @@
+{% extends 'base.html' %}
+
+{% block title %}管理菜品 - 餐饮信息管理系统{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>管理菜品</h2>
+    {% if restaurants %}
+    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addDishModal">
+        添加菜品
+    </button>
+    {% endif %}
+</div>
+
+{% if restaurants %}
+<!-- 按餐厅分组显示菜品 -->
+{% set restaurants_with_dishes = {} %}
+{% for item in dishes_data %}
+    {% if item.restaurant_name not in restaurants_with_dishes %}
+        {% set _ = restaurants_with_dishes.update({item.restaurant_name: {'rest_id': item.rest_id, 'dishes': []}}) %}
+    {% endif %}
+    {% if item.dish_id %}
+        {% set _ = restaurants_with_dishes[item.restaurant_name]['dishes'].append(item) %}
+    {% endif %}
+{% endfor %}
+
+<!-- 为没有菜品的餐厅添加空列表 -->
+{% for restaurant in restaurants %}
+    {% if restaurant.name not in restaurants_with_dishes %}
+        {% set _ = restaurants_with_dishes.update({restaurant.name: {'rest_id': restaurant.rest_id, 'dishes': []}}) %}
+    {% endif %}
+{% endfor %}
+
+{% for restaurant_name, restaurant_info in restaurants_with_dishes.items() %}
+<div class="card mb-4" id="restaurant-{{ restaurant_info.rest_id }}">
+    <div class="card-header">
+        <h4>{{ restaurant_name }}</h4>
+    </div>
+    <div class="card-body">
+        {% if restaurant_info.dishes %}
+        <div class="row">
+            {% for dish in restaurant_info.dishes %}
+            <div class="col-md-6 col-lg-4 mb-3">
+                <div class="card h-100">
+                    {% if dish.img_url %}
+                    <img src="{{ dish.img_url }}" class="card-img-top" alt="{{ dish.dish_name }}" style="height: 150px; object-fit: cover;">
+                    {% else %}
+                    <img src="{{ url_for('static', filename='images/2.jpg') }}" class="card-img-top" alt="菜品默认图片" style="height: 150px; object-fit: cover;">
+                    {% endif %}
+                    <div class="card-body d-flex flex-column">
+                        <h6 class="card-title">{{ dish.dish_name }}</h6>
+                        <p class="card-text flex-grow-1">
+                            <strong>价格:</strong> ¥{{ "%.2f"|format(dish.price) }}<br>
+                            <small>{{ dish.description or '暂无描述' }}</small><br>
+                            <small class="text-success">推荐数: {{ dish.rec_count }}</small>
+                        </p>
+                        <div class="btn-group btn-group-sm mt-auto" role="group">
+                            <a href="{{ url_for('merchant.edit_dish', dish_id=dish.dish_id) }}" class="btn btn-outline-primary">编辑</a>
+                            <button type="button" class="btn btn-outline-danger" onclick="deleteDish({{ dish.dish_id }}, '{{ dish.dish_name }}')">删除</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="text-muted">该餐厅暂无菜品</p>
+        {% endif %}
+    </div>
+</div>
+{% endfor %}
+
+{% else %}
+<div class="text-center">
+    <p class="text-muted">您还没有管理任何餐厅，无法添加菜品</p>
+    <p class="text-muted">请联系管理员将餐厅分配给您</p>
+</div>
+{% endif %}
+
+<!-- 添加菜品模态框 -->
+{% if restaurants %}
+<div class="modal fade" id="addDishModal" tabindex="-1" aria-labelledby="addDishModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addDishModalLabel">添加菜品</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" action="{{ url_for('merchant.add_dish') }}" enctype="multipart/form-data" id="addDishForm">
+                <div class="modal-body">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="rest_id" class="form-label">选择餐厅 *</label>
+                                <select class="form-select" id="rest_id" name="rest_id" required>
+                                    <option value="">请选择餐厅</option>
+                                    {% for restaurant in restaurants %}
+                                    <option value="{{ restaurant.rest_id }}">{{ restaurant.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="name" class="form-label">菜品名称 *</label>
+                                <input type="text" class="form-control" id="name" name="name" required>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="price" class="form-label">价格 *</label>
+                                <input type="number" class="form-control" id="price" name="price" step="0.01" min="0" required>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="dish_image" class="form-label">菜品图片</label>
+                                <input type="file" class="form-control" id="dish_image" name="dish_image" accept="image/*">
+                                <small class="form-text text-muted">支持 JPG, PNG, GIF 格式</small>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <img id="image_preview" src="#" alt="图片预览" style="max-width: 100%; max-height: 200px; display: none;" class="img-thumbnail">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="description" class="form-label">描述</label>
+                        <textarea class="form-control" id="description" name="description" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="submit" class="btn btn-primary">添加菜品</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<script>
+// 图片预览功能
+document.getElementById('dish_image').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const preview = document.getElementById('image_preview');
+            preview.src = e.target.result;
+            preview.style.display = 'block';
+        };
+        reader.readAsDataURL(file);
+    }
+});
+
+// 删除菜品确认
+function deleteDish(dishId, dishName) {
+    if (confirm('确定要删除菜品 "' + dishName + '" 吗？')) {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '/merchant/delete_dish/' + dishId;
+        
+        const csrfInput = document.createElement('input');
+        csrfInput.type = 'hidden';
+        csrfInput.name = 'csrf_token';
+        csrfInput.value = '{{ csrf_token() }}';
+        
+        form.appendChild(csrfInput);
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+
+// 确保模态框稳定性
+document.addEventListener('DOMContentLoaded', function() {
+    const modal = document.getElementById('addDishModal');
+    if (modal) {
+        modal.addEventListener('hidden.bs.modal', function () {
+            // 清空表单
+            document.getElementById('addDishForm').reset();
+            const preview = document.getElementById('image_preview');
+            if (preview) {
+                preview.style.display = 'none';
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

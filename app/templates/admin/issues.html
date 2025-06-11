@@ -1,0 +1,149 @@
+{% extends 'base.html' %}
+
+{% block title %}问题报告管理 - 餐饮信息管理系统{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>
+        <i class="fas fa-exclamation-circle text-warning me-2"></i>
+        问题报告管理
+    </h2>
+    <div class="btn-group" role="group">
+        <a href="{{ url_for('admin.manage_issues') }}" 
+           class="btn btn-outline-primary {% if current_filter == 'all' %}active{% endif %}">
+            全部 ({{ (stats.get('pending', 0) + stats.get('in_progress', 0) + stats.get('resolved', 0) + stats.get('closed', 0)) }})
+        </a>
+        <a href="{{ url_for('admin.manage_issues') }}?status=pending" 
+           class="btn btn-outline-warning {% if current_filter == 'pending' %}active{% endif %}">
+            待处理 ({{ stats.get('pending', 0) }})
+        </a>
+        <a href="{{ url_for('admin.manage_issues') }}?status=in_progress" 
+           class="btn btn-outline-info {% if current_filter == 'in_progress' %}active{% endif %}">
+            处理中 ({{ stats.get('in_progress', 0) }})
+        </a>
+        <a href="{{ url_for('admin.manage_issues') }}?status=resolved" 
+           class="btn btn-outline-success {% if current_filter == 'resolved' %}active{% endif %}">
+            已解决 ({{ stats.get('resolved', 0) }})
+        </a>
+    </div>
+</div>
+
+{% if issues %}
+{% for issue in issues %}
+<div class="card mb-3 {% if issue.priority == 'urgent' %}border-danger{% elif issue.priority == 'high' %}border-warning{% endif %}">
+    <div class="card-header">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h6 class="mb-1">
+                    {% if issue.issue_type == 'bug' %}
+                        <i class="fas fa-bug text-danger"></i>
+                    {% elif issue.issue_type == 'feature' %}
+                        <i class="fas fa-lightbulb text-warning"></i>
+                    {% elif issue.issue_type == 'complaint' %}
+                        <i class="fas fa-exclamation-triangle text-warning"></i>
+                    {% elif issue.issue_type == 'suggestion' %}
+                        <i class="fas fa-comment text-info"></i>
+                    {% else %}
+                        <i class="fas fa-question-circle text-secondary"></i>
+                    {% endif %}
+                    {{ issue.subject }}
+                </h6>
+                <small class="text-muted">
+                    报告人: {{ issue.reporter_name }}
+                    {% if issue.username %} ({{ issue.username }}) {% endif %}
+                    {% if issue.reporter_email %} | {{ issue.reporter_email }} {% endif %}
+                    | {{ issue.created_at.strftime('%Y-%m-%d %H:%M') }}
+                </small>
+            </div>
+            <div class="col-md-4 text-end">
+                <span class="badge bg-{{ 'warning' if issue.status == 'pending' else 'info' if issue.status == 'in_progress' else 'success' if issue.status == 'resolved' else 'secondary' }}">
+                    {% if issue.status == 'pending' %}待处理
+                    {% elif issue.status == 'in_progress' %}处理中
+                    {% elif issue.status == 'resolved' %}已解决
+                    {% else %}已关闭{% endif %}
+                </span>
+                <span class="badge bg-{{ 'danger' if issue.priority == 'urgent' else 'warning' if issue.priority == 'high' else 'info' if issue.priority == 'medium' else 'secondary' }}">
+                    {% if issue.priority == 'urgent' %}紧急
+                    {% elif issue.priority == 'high' %}高
+                    {% elif issue.priority == 'medium' %}中
+                    {% else %}低{% endif %}
+                </span>
+            </div>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="mb-3">
+            <strong>问题描述：</strong>
+            <p class="mt-2">{{ issue.description }}</p>
+        </div>
+        
+        {% if issue.admin_response %}
+        <div class="alert alert-info">
+            <strong><i class="fas fa-reply me-1"></i>管理员回复：</strong><br>
+            {{ issue.admin_response }}
+            <small class="text-muted d-block mt-1">
+                回复时间: {{ issue.updated_at.strftime('%Y-%m-%d %H:%M') }}
+            </small>
+        </div>
+        {% endif %}
+        
+        <form method="POST" action="{{ url_for('admin.update_issue', report_id=issue.report_id) }}" class="row g-3">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            
+            <div class="col-md-2">
+                <label class="form-label small">状态</label>
+                <select class="form-select form-select-sm" name="status">
+                    <option value="pending" {% if issue.status == 'pending' %}selected{% endif %}>待处理</option>
+                    <option value="in_progress" {% if issue.status == 'in_progress' %}selected{% endif %}>处理中</option>
+                    <option value="resolved" {% if issue.status == 'resolved' %}selected{% endif %}>已解决</option>
+                    <option value="closed" {% if issue.status == 'closed' %}selected{% endif %}>已关闭</option>
+                </select>
+            </div>
+            
+            <div class="col-md-2">
+                <label class="form-label small">优先级</label>
+                <select class="form-select form-select-sm" name="priority">
+                    <option value="low" {% if issue.priority == 'low' %}selected{% endif %}>低</option>
+                    <option value="medium" {% if issue.priority == 'medium' %}selected{% endif %}>中</option>
+                    <option value="high" {% if issue.priority == 'high' %}selected{% endif %}>高</option>
+                    <option value="urgent" {% if issue.priority == 'urgent' %}selected{% endif %}>紧急</option>
+                </select>
+            </div>
+            
+            <div class="col-md-6">
+                <label class="form-label small">管理员回复</label>
+                <input type="text" class="form-control form-control-sm" name="admin_response" 
+                       value="{{ issue.admin_response or '' }}" placeholder="回复用户的问题...">
+            </div>
+            
+            <div class="col-md-2">
+                <label class="form-label small">&nbsp;</label>
+                <button type="submit" class="btn btn-sm btn-primary w-100">
+                    <i class="fas fa-save me-1"></i>更新
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endfor %}
+{% else %}
+<div class="text-center py-5">
+    <i class="fas fa-inbox fa-4x text-muted mb-3"></i>
+    <h4 class="text-muted">暂无问题报告</h4>
+    <p class="text-muted">
+        当前没有
+        {% if current_filter != 'all' %}
+            {% if current_filter == 'pending' %}待处理的
+            {% elif current_filter == 'in_progress' %}处理中的
+            {% elif current_filter == 'resolved' %}已解决的
+            {% elif current_filter == 'closed' %}已关闭的
+            {% endif %}
+        {% endif %}
+        问题报告
+    </p>
+    <a href="{{ url_for('main.report_issue') }}" class="btn btn-outline-primary">
+        <i class="fas fa-plus me-1"></i>查看报告问题页面
+    </a>
+</div>
+{% endif %}
+{% endblock %}

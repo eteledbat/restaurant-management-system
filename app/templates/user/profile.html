@@ -1,0 +1,102 @@
+{% extends 'base.html' %}
+
+{% block title %}个人信息 - 餐饮信息管理系统{% endblock %}
+
+{% block content %}
+<h2 class="mb-4">个人信息</h2>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">基本信息</h5>
+                <table class="table table-borderless">
+                    <tr>
+                        <td><strong>用户名:</strong></td>
+                        <td>{{ current_user.username }}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>邮箱:</strong></td>
+                        <td>{{ current_user.email }}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>电话:</strong></td>
+                        <td>{{ current_user.phone or '未填写' }}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>用户类型:</strong></td>
+                        <td>
+                            {% if current_user.user_type == 'admin' %}管理员
+                            {% elif current_user.user_type == 'merchant' %}商家
+                            {% else %}普通用户
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong>注册时间:</strong></td>
+                        <td>
+                          {% if current_user.join_date %}
+                              {{ current_user.join_date.strftime('%Y-%m-%d') }}
+                          {% else %}
+                              未知
+                          {% endif %}
+                      </td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">操作</h5>
+                <div class="d-grid gap-2">
+                    <a href="{{ url_for('user.edit_profile') }}" class="btn btn-primary">编辑个人信息</a>
+                    <a href="{{ url_for('user.change_password') }}" class="btn btn-outline-secondary">修改密码</a>
+                    
+                    {% if current_user.user_type == 'user' %}
+                    <a href="{{ url_for('review.my_reviews') }}" class="btn btn-outline-info">我的评论</a>
+                    <a href="{{ url_for('restaurant.favorites') }}" class="btn btn-outline-info">收藏餐厅</a>
+                    {% elif current_user.user_type == 'merchant' %}
+                    <a href="{{ url_for('merchant.my_restaurants') }}" class="btn btn-outline-info">我的餐厅</a>
+                    <a href="{{ url_for('merchant.manage_dishes') }}" class="btn btn-outline-info">管理菜品</a>
+                    {% endif %}
+                    
+                    <hr>
+                    <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteAccountModal">
+                        注销账号
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 注销账号确认模态框 -->
+<div class="modal fade" id="deleteAccountModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">确认注销账号</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-danger"><strong>警告：此操作不可逆！</strong></p>
+                <p>注销账号后，您的所有数据将被标记为删除状态，无法恢复。</p>
+                <form id="deleteAccountForm" method="POST" action="{{ url_for('user.delete_account') }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                    <div class="mb-3">
+                        <label for="deletePassword" class="form-label">请输入密码确认:</label>
+                        <input type="password" class="form-control" id="deletePassword" name="password" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="submit" form="deleteAccountForm" class="btn btn-danger">确认注销</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

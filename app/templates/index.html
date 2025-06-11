@@ -1,0 +1,560 @@
+{% extends 'base.html' %}
+
+{% block title %}首页 - 餐饮信息管理系统{% endblock %}
+
+{% block content %}
+<div class="jumbotron bg-primary text-white rounded p-5 mb-5">
+    <div class="container text-center">
+        <h1 class="mb-3 text-white fw-bold">欢迎使用餐饮信息管理系统</h1>
+        <p class="lead mb-4">发现美食，分享体验</p>
+        
+        <!-- 搜索栏 -->
+        <div class="row justify-content-center mb-4">
+            <div class="col-md-8">
+                <form action="{{ url_for('main.search') }}" method="GET" class="d-flex">
+                    <div class="input-group input-group-lg">
+                        <input type="text" class="form-control" name="q" placeholder="请输入餐厅/菜品名称/所在城市进行搜索..." required>
+                        <select class="form-select" name="type" style="max-width: 120px;">
+                            <option value="all">全部</option>
+                            <option value="restaurant">餐厅</option>
+                            <option value="dish">菜品</option>
+                        </select>
+                        <button class="btn btn-warning btn-lg" type="submit">
+                            <i class="fas fa-search"></i> 搜索
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <p class="mb-4">浏览各类餐厅，查看菜品，阅读评论，分享您的用餐体验</p>
+        <a class="btn btn-light btn-lg" href="{{ url_for('restaurant.restaurant_list') }}" role="button">
+            <i class="fas fa-utensils"></i> 浏览所有餐厅
+        </a>
+    </div>
+</div>
+
+<!-- 评分最高的餐厅展示区域 -->
+{% if top_restaurants %}
+<div class="mb-5" id="top-restaurants">
+    <div class="text-center mb-4">
+        <h2 class="display-6">🏆 评分最高的餐厅</h2>
+        <p class="text-muted">这些餐厅获得了用户的一致好评</p>
+    </div>
+
+    <div class="row justify-content-center">
+        {% for restaurant in top_restaurants %}
+        <div class="col-lg-4 col-md-6 mb-4">
+            <div class="card h-100 shadow-sm border-0">
+                <!-- 餐厅图片 -->
+                <div class="position-relative">
+                    {% if restaurant.img_url %}
+                    <img src="{{ restaurant.img_url }}" class="card-img-top" alt="{{ restaurant.name }}" style="height: 250px; object-fit: cover;">
+                    {% else %}
+                    <img src="{{ url_for('static', filename='images/1.jpg') }}" class="card-img-top" alt="餐厅默认图片" style="height: 250px; object-fit: cover;">
+                    {% endif %}
+                    
+                    <!-- 评分徽章 -->
+                    <div class="position-absolute top-0 end-0 m-2">
+                        <span class="badge bg-warning text-dark fs-6 px-3 py-2">
+                            ⭐ {{ "%.1f"|format(restaurant.rating) }}
+                        </span>
+                    </div>
+                    
+                    <!-- 排名徽章 -->
+                    <div class="position-absolute top-0 start-0 m-2">
+                        <span class="badge bg-primary fs-6 px-3 py-2">
+                            #{{ restaurant.rank }}
+                        </span>
+                    </div>
+                </div>
+                
+                <div class="card-body d-flex flex-column">
+                    <h5 class="card-title text-center mb-3">{{ restaurant.name }}</h5>
+                    
+                    <div class="text-center mb-3">
+                        <span class="badge bg-secondary me-2">{{ restaurant.type }}</span>
+                        <small class="text-success">{{ restaurant.review_count }} 条评论</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="fas fa-map-marker-alt text-muted me-2"></i>
+                            <small class="text-muted">{{ restaurant.address }}</small>
+                        </div>
+                        {% if restaurant.opening_hours %}
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-clock text-muted me-2"></i>
+                            <small class="text-muted">{{ restaurant.opening_hours }}</small>
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mt-auto text-center">
+                        <a href="{{ url_for('restaurant.detail', rest_id=restaurant.rest_id) }}" class="btn btn-primary btn-lg w-100">
+                            <i class="fas fa-eye"></i> 查看详情
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% else %}
+<!-- 如果没有评分数据的提示 -->
+<div class="text-center py-5" id="top-restaurants">
+    <div class="mb-4">
+        <i class="fas fa-utensils fa-4x text-muted"></i>
+    </div>
+    <h3 class="text-muted mb-3">暂无餐厅评分数据</h3>
+    <p class="text-muted mb-4">成为第一个为餐厅评分的用户吧！</p>
+    <a href="{{ url_for('restaurant.restaurant_list') }}" class="btn btn-primary btn-lg">
+        <i class="fas fa-search"></i> 发现餐厅
+    </a>
+</div>
+{% endif %}
+
+<!-- 餐厅分类快速入口 - 修改为只显示3个类别 + 更多 -->
+{% if categories %}
+<div class="row mb-5">
+    <div class="col-12">
+        <h3 class="text-center mb-4">
+            <i class="fas fa-tags me-2"></i>热门分类
+            <small class="text-muted d-block mt-2">快速找到您喜欢的美食类型</small>
+        </h3>
+        <div class="row justify-content-center">
+            <!-- 显示前3个分类 -->
+            {% for category in categories[:3] %}
+            <div class="col-lg-3 col-md-4 col-sm-6 mb-3">
+                <a href="{{ url_for('restaurant.restaurant_list', category_name=category.category_name) }}" 
+                   class="text-decoration-none">
+                    <div class="card text-center h-100 category-card shadow-sm">
+                        <div class="card-body d-flex flex-column">
+                            <i class="fas fa-utensils fa-3x text-primary mb-3"></i>
+                            <h5 class="card-title text-dark">{{ category.category_name }}</h5>
+                            {% if category.description %}
+                            <p class="card-text text-muted flex-grow-1">{{ category.description }}</p>
+                            {% else %}
+                            <p class="card-text text-muted flex-grow-1">发现精选{{ category.category_name }}餐厅</p>
+                            {% endif %}
+                            <div class="mt-auto">
+                                <span class="badge bg-primary rounded-pill">立即探索</span>
+                            </div>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            {% endfor %}
+            
+            <!-- 第4个卡片 - 更多类别 -->
+            <div class="col-lg-3 col-md-4 col-sm-6 mb-3">
+                <a href="{{ url_for('restaurant.restaurant_list') }}" class="text-decoration-none">
+                    <div class="card text-center h-100 category-card more-category-card shadow-sm">
+                        <div class="card-body d-flex flex-column justify-content-center">
+                            <i class="fas fa-ellipsis-h fa-3x text-secondary mb-3"></i>
+                            <h5 class="card-title text-dark">更多分类</h5>
+                            <p class="card-text text-muted">
+                                探索全部 {{ categories|length }} 种美食分类
+                            </p>
+                            <div class="mt-auto">
+                                <span class="badge bg-secondary rounded-pill">查看全部</span>
+                            </div>
+                        </div>
+                    </div>
+                </a>
+            </div>
+        </div>
+        
+        <!-- 添加一个小提示 -->
+        <div class="text-center mt-3">
+            <small class="text-muted">
+                <i class="fas fa-info-circle me-1"></i>
+                点击任意分类卡片，即可查看该分类下的所有餐厅
+            </small>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- 快速导航区域 - 添加大标题 -->
+<div class="row mb-5">
+  <div class="col-12">
+      <!-- 修改为与热门分类一致的格式 -->
+      <h3 class="text-center mb-4">
+          <i class="fas fa-compass me-2"></i>快速导航
+          <small class="text-muted d-block mt-2">快速访问您需要的功能</small>
+      </h3>
+  </div>
+</div>
+
+<div class="row text-center">
+    <div class="col-md-3 mb-3">
+        <div class="card border-0 h-100 nav-card">
+            <div class="card-body">
+                <div class="mb-3">
+                    <i class="fas fa-utensils fa-3x text-primary"></i>
+                </div>
+                <h5>浏览餐厅</h5>
+                <p class="text-muted">发现附近的美食餐厅</p>
+                <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#citySelectModal">
+                    开始浏览
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    {% if current_user.is_authenticated %}
+        {% if current_user.user_type == 'user' %}
+        <div class="col-md-3 mb-3">
+            <div class="card border-0 h-100 nav-card">
+                <div class="card-body">
+                    <div class="mb-3">
+                        <i class="fas fa-heart fa-3x text-danger"></i>
+                    </div>
+                    <h5>我的收藏</h5>
+                    <p class="text-muted">查看收藏的餐厅</p>
+                    <a href="{{ url_for('restaurant.favorites') }}" class="btn btn-outline-danger">查看收藏</a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3 mb-3">
+            <div class="card border-0 h-100 nav-card">
+                <div class="card-body">
+                    <div class="mb-3">
+                        <i class="fas fa-comment fa-3x text-success"></i>
+                    </div>
+                    <h5>我的评论</h5>
+                    <p class="text-muted">管理我的餐厅评论</p>
+                    <a href="{{ url_for('review.my_reviews') }}" class="btn btn-outline-success">查看评论</a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3 mb-3">
+            <div class="card border-0 h-100 nav-card">
+                <div class="card-body">
+                    <div class="mb-3">
+                        <i class="fas fa-user fa-3x text-info"></i>
+                    </div>
+                    <h5>个人中心</h5>
+                    <p class="text-muted">管理个人信息</p>
+                    <a href="{{ url_for('user.profile') }}" class="btn btn-outline-info">个人中心</a>
+                </div>
+            </div>
+        </div>
+        {% elif current_user.user_type == 'merchant' %}
+        <div class="col-md-3 mb-3">
+            <div class="card border-0 h-100 nav-card">
+                <div class="card-body">
+                    <div class="mb-3">
+                        <i class="fas fa-store fa-3x text-warning"></i>
+                    </div>
+                    <h5>我的餐厅</h5>
+                    <p class="text-muted">管理我的餐厅</p>
+                    <a href="{{ url_for('merchant.my_restaurants') }}" class="btn btn-outline-warning">餐厅管理</a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3 mb-3">
+            <div class="card border-0 h-100 nav-card">
+                <div class="card-body">
+                    <div class="mb-3">
+                        <i class="fas fa-pizza-slice fa-3x text-info"></i>
+                    </div>
+                    <h5>菜品管理</h5>
+                    <p class="text-muted">管理餐厅菜品</p>
+                    <a href="{{ url_for('merchant.manage_dishes') }}" class="btn btn-outline-info">菜品管理</a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3 mb-3">
+            <div class="card border-0 h-100 nav-card">
+                <div class="card-body">
+                    <div class="mb-3">
+                        <i class="fas fa-comment-dots fa-3x text-success"></i>
+                    </div>
+                    <h5>管理回复</h5>
+                    <p class="text-muted">管理用户评论回复</p>
+                    <a href="{{ url_for('merchant.replies') }}" class="btn btn-outline-success">回复管理</a>
+                </div>
+            </div>
+        </div>
+        {% elif current_user.user_type == 'admin' %}
+        <div class="col-md-3 mb-3">
+            <div class="card border-0 h-100 nav-card">
+                <div class="card-body">
+                    <div class="mb-3">
+                        <i class="fas fa-cog fa-3x text-secondary"></i>
+                    </div>
+                    <h5>管理后台</h5>
+                    <p class="text-muted">系统管理功能</p>
+                    <a href="{{ url_for('admin.dashboard') }}" class="btn btn-outline-secondary">进入后台</a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3 mb-3">
+            <div class="card border-0 h-100 nav-card">
+                <div class="card-body">
+                    <div class="mb-3">
+                        <i class="fas fa-users fa-3x text-primary"></i>
+                    </div>
+                    <h5>用户管理</h5>
+                    <p class="text-muted">管理系统用户</p>
+                    <a href="{{ url_for('admin.manage_users') }}" class="btn btn-outline-primary">用户管理</a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3 mb-3">
+            <div class="card border-0 h-100 nav-card">
+                <div class="card-body">
+                    <div class="mb-3">
+                        <i class="fas fa-building fa-3x text-warning"></i>
+                    </div>
+                    <h5>餐厅管理</h5>
+                    <p class="text-muted">管理所有餐厅</p>
+                    <a href="{{ url_for('admin.manage_restaurants') }}" class="btn btn-outline-warning">餐厅管理</a>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    {% else %}
+    <div class="col-md-3 mb-3">
+        <div class="card border-0 h-100 nav-card">
+            <div class="card-body">
+                <div class="mb-3">
+                    <i class="fas fa-user-plus fa-3x text-success"></i>
+                </div>
+                <h5>注册账号</h5>
+                <p class="text-muted">加入我们的社区</p>
+                <a href="{{ url_for('auth.register') }}" class="btn btn-outline-success">立即注册</a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="card border-0 h-100 nav-card">
+            <div class="card-body">
+                <div class="mb-3">
+                    <i class="fas fa-sign-in-alt fa-3x text-primary"></i>
+                </div>
+                <h5>用户登录</h5>
+                <p class="text-muted">登录您的账号</p>
+                <a href="{{ url_for('auth.login') }}" class="btn btn-outline-primary">立即登录</a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="card border-0 h-100 nav-card">
+            <div class="card-body">
+                <div class="mb-3">
+                    <i class="fas fa-info-circle fa-3x text-info"></i>
+                </div>
+                <h5>了解更多</h5>
+                <p class="text-muted">了解系统功能</p>
+                <a href="{{ url_for('restaurant.restaurant_list') }}" class="btn btn-outline-info">开始探索</a>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- 城市选择模态框 -->
+<div class="modal fade" id="citySelectModal" tabindex="-1" aria-labelledby="citySelectModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="citySelectModalLabel">选择您的城市</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted mb-3">请选择您所在的城市，我们将为您展示该城市的美食餐厅。</p>
+                
+                <div class="row" id="cityList">
+                    <div class="col-12 text-center">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">加载中...</span>
+                        </div>
+                        <p class="mt-2">正在加载城市列表...</p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <a href="{{ url_for('restaurant.restaurant_list') }}" class="btn btn-outline-primary">查看所有餐厅</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 样式 -->
+<style>
+/* 分类卡片样式 */
+.category-card {
+    transition: all 0.3s ease;
+    border: none;
+    background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+    cursor: pointer;
+}
+
+.category-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15) !important;
+}
+
+.more-category-card {
+    background: linear-gradient(135deg, #e9ecef 0%, #f8f9fa 100%);
+    border: 2px dashed #dee2e6;
+}
+
+.more-category-card:hover {
+    background: linear-gradient(135deg, #dee2e6 0%, #e9ecef 100%);
+    border-color: #adb5bd;
+}
+
+/* 大标题样式 */
+.display-4 {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(45deg, #007bff, #0056b3);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+/* 快速导航卡片样式 */
+.nav-card {
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.nav-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+/* 分类标题样式 */
+h3 i {
+    background: linear-gradient(45deg, #28a745, #20c997);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+/* 图标动画效果 */
+.category-card:hover i {
+    animation: bounce 0.6s ease;
+}
+
+.nav-card:hover i {
+    animation: pulse 0.6s ease;
+}
+
+@keyframes bounce {
+    0%, 20%, 60%, 100% {
+        transform: translateY(0);
+    }
+    40% {
+        transform: translateY(-10px);
+    }
+    80% {
+        transform: translateY(-5px);
+    }
+}
+
+@keyframes pulse {
+    0% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.1);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+/* 卡片内容对齐 */
+.category-card .card-body {
+    min-height: 200px;
+}
+
+.more-category-card .card-body {
+    min-height: 200px;
+    background: radial-gradient(circle at center, rgba(108, 117, 125, 0.1) 0%, transparent 70%);
+}
+
+.nav-card .card-body {
+    padding: 1.5rem;
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+    .display-4 {
+        font-size: 2rem;
+    }
+    
+    .category-card {
+        margin-bottom: 20px;
+    }
+    
+    .nav-card {
+        margin-bottom: 20px;
+    }
+}
+</style>
+
+<script>
+// 当模态框显示时加载城市列表
+document.getElementById('citySelectModal').addEventListener('show.bs.modal', function () {
+    loadCityList();
+});
+
+function loadCityList() {
+    fetch('/api/cities')
+        .then(response => response.json())
+        .then(data => {
+            const cityListDiv = document.getElementById('cityList');
+            if (data.cities && data.cities.length > 0) {
+                let html = '';
+                data.cities.forEach(city => {
+                    html += `
+                        <div class="col-md-6 mb-2">
+                            <button type="button" class="btn btn-outline-secondary w-100" onclick="selectCity('${city}')">
+                                <i class="fas fa-map-marker-alt me-2"></i>${city}
+                            </button>
+                        </div>
+                    `;
+                });
+                cityListDiv.innerHTML = html;
+            } else {
+                cityListDiv.innerHTML = `
+                    <div class="col-12 text-center">
+                        <i class="fas fa-exclamation-circle fa-2x text-muted mb-2"></i>
+                        <p class="text-muted">暂无城市数据</p>
+                    </div>
+                `;
+            }
+        })
+        .catch(error => {
+            console.error('Error loading cities:', error);
+            document.getElementById('cityList').innerHTML = `
+                <div class="col-12 text-center">
+                    <i class="fas fa-exclamation-triangle fa-2x text-warning mb-2"></i>
+                    <p class="text-warning">加载城市列表失败</p>
+                </div>
+            `;
+        });
+}
+
+function selectCity(city) {
+    // 跳转到城市餐厅页面
+    window.location.href = '/city_restaurants?city=' + encodeURIComponent(city);
+}
+</script>
+{% endblock %}

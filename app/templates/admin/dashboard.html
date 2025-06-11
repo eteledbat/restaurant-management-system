@@ -1,0 +1,142 @@
+{% extends 'base.html' %}
+
+{% block title %}管理员仪表板 - 餐饮信息管理系统{% endblock %}
+
+{% block content %}
+<h2 class="mb-4">管理员仪表板</h2>
+
+<!-- 统计卡片 -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title">普通用户</h5>
+                <h2 class="text-primary">{{ user_count }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title">商家用户</h5>
+                <h2 class="text-success">{{ merchant_count }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title">餐厅数量</h5>
+                <h2 class="text-warning">{{ restaurant_count }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title">评论数量</h5>
+                <h2 class="text-info">{{ review_count }}</h2>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 快捷操作 -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5>快捷操作</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3 mb-2">
+                        <a href="{{ url_for('admin.manage_restaurants') }}" class="btn btn-outline-primary w-100">管理餐厅</a>
+                    </div>
+                    <div class="col-md-3 mb-2">
+                        <a href="{{ url_for('admin.manage_users') }}" class="btn btn-outline-secondary w-100">管理用户</a>
+                    </div>
+                    <div class="col-md-3 mb-2">
+                        <a href="{{ url_for('admin.manage_reviews') }}" class="btn btn-outline-info w-100">管理评论</a>
+                    </div>
+                    <div class="col-md-3 mb-2">
+                        <a href="{{ url_for('restaurant.restaurant_list') }}" class="btn btn-outline-success w-100">查看餐厅</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- 最近注册用户 -->
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5>最近注册用户</h5>
+            </div>
+            <div class="card-body">
+                {% if recent_users %}
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>用户名</th>
+                                <th>类型</th>
+                                <th>注册时间</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for user in recent_users %}
+                            <tr>
+                                <td>{{ user.username }}</td>
+                                <td>
+                                    {% if user.user_type == 'admin' %}
+                                        <span class="badge bg-danger">管理员</span>
+                                    {% elif user.user_type == 'merchant' %}
+                                        <span class="badge bg-warning">商家</span>
+                                    {% else %}
+                                        <span class="badge bg-primary">用户</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ user.join_date.strftime('%m-%d %H:%M') }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted">暂无数据</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- 最近评论 -->
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5>最近评论</h5>
+            </div>
+            <div class="card-body">
+                {% if recent_reviews %}
+                {% for review in recent_reviews %}
+                <div class="mb-3 border-bottom pb-2">
+                    <div class="d-flex justify-content-between">
+                        <small><strong>{{ review.username }}</strong> @ {{ review.restaurant_name }}</small>
+                        <small class="text-muted">{{ review.review_time.strftime('%m-%d %H:%M') }}</small>
+                    </div>
+                    <div class="d-flex align-items-center">
+                        <span class="badge bg-primary me-2">{{ review.rating }}/10</span>
+                        <small>{{ review.comment[:50] }}{% if review.comment|length > 50 %}...{% endif %}</small>
+                    </div>
+                </div>
+                {% endfor %}
+                {% else %}
+                <p class="text-muted">暂无评论</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

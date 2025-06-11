@@ -1,0 +1,75 @@
+{% extends 'base.html' %}
+
+{% block title %}我的评论 - 餐饮信息管理系统{% endblock %}
+
+{% block content %}
+<h2 class="mb-4">我的评论</h2>
+
+{% if reviews %}
+<div class="row">
+    {% for review in reviews %}
+    <div class="col-md-12 mb-4">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <div>
+                    <h5>{{ review.restaurant_name }}</h5>
+                    <small class="text-muted">评分: {{ review.rating }}/10 | 发表时间: {{ review.review_time.strftime('%Y-%m-%d %H:%M') }}</small>
+                </div>
+                <div>
+                    <button class="btn btn-sm btn-outline-primary" onclick="editReview({{ review.review_id }}, {{ review.comment|tojson }}, {{ review.rating }})">编辑</button>
+                    <form method="POST" action="{{ url_for('review.delete_review', review_id=review.review_id) }}" style="display: inline;" onsubmit="return confirm('确定要删除这条评论吗？')">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                        <button type="submit" class="btn btn-sm btn-outline-danger">删除</button>
+                    </form>
+                </div>
+            </div>
+            <div class="card-body">
+                <p id="comment-{{ review.review_id }}">{{ review.comment }}</p>
+                {% if review.updated_time %}
+                <small class="text-muted">最后修改: {{ review.updated_time.strftime('%Y-%m-%d %H:%M') }}</small>
+                {% endif %}
+                
+                <!-- 编辑表单（默认隐藏） -->
+                <div id="edit-form-{{ review.review_id }}" style="display: none;">
+                    <form method="POST" action="{{ url_for('review.update_review', review_id=review.review_id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                        <div class="mb-3">
+                            <label class="form-label">评分 (1-10)</label>
+                            <select class="form-control" name="rating" required>
+                                {% for i in range(1, 11) %}
+                                <option value="{{ i }}" {% if i == review.rating %}selected{% endif %}>{{ i }}分</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">评论内容</label>
+                            <textarea class="form-control" name="comment" rows="3" required>{{ review.comment }}</textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-sm">保存</button>
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="cancelEdit('{{ review.review_id }}')">取消</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="text-center">
+    <p class="text-muted">您还没有发表过评论</p>
+    <a href="{{ url_for('restaurant.restaurant_list') }}" class="btn btn-primary">去看看餐厅</a>
+</div>
+{% endif %}
+
+<script>
+function editReview(reviewId, comment, rating) {
+    document.getElementById('comment-' + reviewId).style.display = 'none';
+    document.getElementById('edit-form-' + reviewId).style.display = 'block';
+}
+
+function cancelEdit(reviewId) {
+    document.getElementById('comment-' + reviewId).style.display = 'block';
+    document.getElementById('edit-form-' + reviewId).style.display = 'none';
+}
+</script>
+{% endblock %}

@@ -1,0 +1,223 @@
+{% extends 'base.html' %}
+
+{% block title %}编辑回复 - 餐饮信息管理系统{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-10">
+        <div class="card">
+            <div class="card-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0">
+                        <i class="fas fa-edit text-warning me-2"></i>
+                        编辑回复
+                    </h4>
+                    <a href="{{ url_for('merchant.replies') }}" class="btn btn-secondary btn-sm">
+                        <i class="fas fa-arrow-left me-1"></i>返回回复列表
+                    </a>
+                </div>
+            </div>
+            <div class="card-body">
+                <!-- 原始评论信息 -->
+                <div class="alert alert-info">
+                    <h6 class="alert-heading">
+                        <i class="fas fa-comment text-info me-2"></i>
+                        原始评论
+                    </h6>
+                    <div class="row">
+                        <div class="col-md-8">
+                            <p class="mb-2">
+                                <strong>评论者：</strong>{{ reply.reviewer_name | e | default('匿名用户') }}
+                            </p>
+                            <p class="mb-2">
+                                <strong>评分：</strong>
+                                <span class="text-warning">
+                                    {% for i in range(1, 11) %}
+                                        {% if i <= (reply.rating | int | default(0)) %}⭐{% else %}☆{% endif %}
+                                    {% endfor %}
+                                </span>
+                                ({{ reply.rating | int | default(0) }}/10)
+                            </p>
+                            <p class="mb-2">
+                                <strong>评论内容：</strong><br>
+                                <span class="fst-italic">{{ reply.review_text | e | default('用户没有留下评论内容') }}</span>
+                            </p>
+                        </div>
+                        <div class="col-md-4">
+                            <p class="mb-1">
+                                <strong>餐厅：</strong>{{ reply.restaurant_name | e }}
+                            </p>
+                            <p class="mb-1">
+                                <strong>评论时间：</strong><br>
+                                {{ reply.review_date.strftime('%Y-%m-%d %H:%M') if reply.review_date else '未知' }}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 编辑回复表单 -->
+                <form method="POST" action="{{ url_for('merchant.update_reply', reply_id=reply.reply_id | int) }}" 
+                      id="editReplyForm" novalidate>
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                    
+                    <div class="mb-3">
+                        <label for="reply_text" class="form-label">
+                            <i class="fas fa-reply me-1"></i>
+                            回复内容 *
+                        </label>
+                        <textarea class="form-control" id="reply_text" name="reply_text" 
+                                  rows="5" required maxlength="1000" 
+                                  placeholder="请输入您的回复内容...">{{ reply.reply_text | e }}</textarea>
+                        <div class="form-text">
+                            回复内容应当礼貌、专业，针对用户的评论给出合适的回应。
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>注意：</strong>
+                        <ul class="mb-0 mt-2">
+                            <li>回复内容一旦提交，用户将能看到</li>
+                            <li>请保持回复的专业性和礼貌性</li>
+                            <li>建议针对用户的具体评论内容进行回应</li>
+                            <li>如果是负面评论，可以解释情况并表示改进意愿</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('merchant.replies') }}" class="btn btn-secondary">
+                            <i class="fas fa-times me-1"></i>取消
+                        </a>
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-save me-1"></i>更新回复
+                        </button>
+                    </div>
+                </form>
+                
+                <!-- 回复历史 -->
+                {% if reply.updated_at and reply.updated_at != reply.created_at %}
+                <hr class="my-4">
+                <div class="small text-muted">
+                    <i class="fas fa-history me-1"></i>
+                    最后更新时间：{{ reply.updated_at.strftime('%Y-%m-%d %H:%M:%S') }}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script nonce="{{ csp_nonce() if csp_nonce else '' }}">
+// 输入验证和清理
+function sanitizeInput(input) {
+    // 移除潜在的恶意字符
+    return input.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+                .replace(/javascript:/gi, '')
+                .replace(/on\w+\s*=/gi, '');
+}
+
+// 表单验证
+document.getElementById('editReplyForm').addEventListener('submit', function(e) {
+    const replyText = document.getElementById('reply_text').value.trim();
+    
+    if (!replyText) {
+        e.preventDefault();
+        alert('请输入回复内容');
+        return false;
+    }
+    
+    if (replyText.length < 5) {
+        e.preventDefault();
+        alert('回复内容至少需要5个字符');
+        return false;
+    }
+    
+    if (replyText.length > 1000) {
+        e.preventDefault();
+        alert('回复内容不能超过1000个字符');
+        return false;
+    }
+    
+    // 内容安全检查
+    const cleanText = sanitizeInput(replyText);
+    if (cleanText !== replyText) {
+        e.preventDefault();
+        alert('回复内容包含不安全的内容，请修改后重试');
+        return false;
+    }
+    
+    // 确认提交
+    if (!confirm('确定要更新这条回复吗？')) {
+        e.preventDefault();
+        return false;
+    }
+});
+
+// 实时输入验证
+document.getElementById('reply_text').addEventListener('input', function() {
+    const maxLength = 1000;
+    const currentLength = this.value.length;
+    const remaining = maxLength - currentLength;
+    
+    // 创建或更新字符计数显示
+    let counter = document.getElementById('char-counter');
+    if (!counter) {
+        counter = document.createElement('div');
+        counter.id = 'char-counter';
+        counter.className = 'form-text text-end';
+        this.parentNode.appendChild(counter);
+    }
+    
+    counter.textContent = `${currentLength}/${maxLength} 字符`;
+    counter.className = remaining < 50 ? 'form-text text-end text-warning' : 'form-text text-end text-muted';
+    
+    if (remaining < 0) {
+        counter.className = 'form-text text-end text-danger';
+        this.value = this.value.substring(0, maxLength);
+    }
+});
+
+// 自动调整文本域高度
+function autoResize() {
+    const textarea = document.getElementById('reply_text');
+    textarea.style.height = 'auto';
+    textarea.style.height = Math.min(textarea.scrollHeight, 300) + 'px';
+}
+
+// 页面加载时调整一次
+document.addEventListener('DOMContentLoaded', function() {
+    autoResize();
+    document.getElementById('reply_text').addEventListener('input', autoResize);
+});
+</script>
+
+<style>
+.fst-italic {
+    font-style: italic;
+}
+
+.alert {
+    border-left: 4px solid;
+}
+
+.alert-info {
+    border-left-color: #0dcaf0;
+}
+
+.alert-warning {
+    border-left-color: #ffc107;
+}
+
+textarea {
+    resize: vertical;
+    min-height: 120px;
+    max-height: 300px;
+}
+
+/* 防止内容溢出 */
+.card-body {
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+}
+</style>
+{% endblock %}

@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+
+{% block title %}收藏餐厅 - 餐饮信息管理系统{% endblock %}
+
+{% block content %}
+<h2 class="mb-4">我收藏的餐厅</h2>
+
+{% if favorites %}
+<div class="row">
+    {% for favorite in favorites %}
+    <div class="col-md-4 mb-4">
+        <div class="card h-100">
+            {% if favorite.img_url %}
+            <img src="{{ favorite.img_url }}" class="card-img-top" alt="{{ favorite.name }}" style="height: 200px; object-fit: cover;">
+            {% else %}
+            <img src="{{ url_for('static', filename='images/1.jpg') }}" class="card-img-top" alt="餐厅默认图片" style="height: 200px; object-fit: cover;">
+            {% endif %}
+            <div class="card-body d-flex flex-column">
+                <h5 class="card-title">{{ favorite.name }}</h5>
+                <p class="card-text">
+                    <small class="text-muted">{{ favorite.type }}</small><br>
+                    <strong>评分:</strong> 
+                    {% if favorite.rating %}
+                        {{ "%.1f"|format(favorite.rating) }} 
+                        <small>({{ favorite.review_count or 0 }} 条评论)</small>
+                    {% else %}
+                        暂无评分
+                    {% endif %}<br>
+                    <strong>地址:</strong> {{ favorite.address }}<br>
+                    <strong>收藏时间:</strong> {{ favorite.timestamp.strftime('%Y-%m-%d') }}
+                </p>
+                <div class="mt-auto">
+                    <a href="{{ url_for('restaurant.detail', rest_id=favorite.rest_id) }}" class="btn btn-primary">查看详情</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="text-center">
+    <p class="text-muted">您还没有收藏任何餐厅</p>
+    <a href="{{ url_for('restaurant.restaurant_list') }}" class="btn btn-primary">去发现餐厅</a>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,2 +1,9 @@
-Flask>=2.0
-gunicorn>=20.0  # 用于 Render 部署
+Flask==2.2.3
+Flask-Login==0.6.2
+Flask-MySQLdb==1.0.1
+Flask-WTF==1.1.1
+Werkzeug==2.2.3
+email-validator==2.0.0
+python-dotenv==1.0.0
+mysqlclient==2.1.1
+Pillow==9.5.0

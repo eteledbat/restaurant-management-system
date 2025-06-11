@@ -1,0 +1,4 @@
+# 在 app/static/uploads/.gitignore 中添加
+*
+!.gitignore
+!.gitkeep

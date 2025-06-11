@@ -1,0 +1,249 @@
+{% extends 'base.html' %}
+
+{% block title %}编辑餐厅信息 - 餐饮信息管理系统{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-10">
+        <div class="card">
+            <div class="card-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0">
+                        <i class="fas fa-edit text-warning me-2"></i>
+                        编辑餐厅信息
+                    </h4>
+                    <div>
+                        <a href="{{ url_for('restaurant.detail', rest_id=restaurant.rest_id) }}" 
+                           class="btn btn-outline-info btn-sm me-2" target="_blank">
+                            <i class="fas fa-eye me-1"></i>预览餐厅
+                        </a>
+                        <a href="{{ url_for('merchant.my_restaurants') }}" class="btn btn-secondary btn-sm">
+                            <i class="fas fa-arrow-left me-1"></i>返回我的餐厅
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('merchant.update_restaurant', rest_id=restaurant.rest_id) }}" 
+                      enctype="multipart/form-data">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                    
+                    <div class="row">
+                        <!-- 餐厅基本信息 -->
+                        <div class="col-md-8">
+                            <h5 class="mb-3">
+                                <i class="fas fa-info-circle text-primary me-2"></i>
+                                基本信息
+                            </h5>
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="name" class="form-label">餐厅名称 *</label>
+                                    <input type="text" class="form-control" id="name" name="name" 
+                                           value="{{ restaurant.name }}" required>
+                                </div>
+                                
+                                <div class="col-md-6 mb-3">
+                                    <label for="type" class="form-label">餐厅类型 *</label>
+                                    <select class="form-select" id="type" name="type" required>
+                                        <option value="">请选择餐厅类型</option>
+                                        <!-- 类别选项将由JavaScript动态加载 -->
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="address" class="form-label">餐厅地址 *</label>
+                                <textarea class="form-control" id="address" name="address" rows="2" required>{{ restaurant.address }}</textarea>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="phone" class="form-label">联系电话</label>
+                                    <input type="tel" class="form-control" id="phone" name="phone" 
+                                           value="{{ restaurant.phone or '' }}" placeholder="例: 021-12345678">
+                                </div>
+                                
+                                <div class="col-md-6 mb-3">
+                                    <label for="opening_hours" class="form-label">营业时间</label>
+                                    <input type="text" class="form-control" id="opening_hours" name="opening_hours" 
+                                           value="{{ restaurant.opening_hours or '' }}" 
+                                           placeholder="例: 周一至周日 10:00-22:00">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 餐厅图片 -->
+                        <div class="col-md-4">
+                            <h5 class="mb-3">
+                                <i class="fas fa-image text-success me-2"></i>
+                                餐厅图片
+                            </h5>
+                            
+                            <!-- 当前图片预览 -->
+                            <div class="current-image mb-3">
+                                <div class="text-center">
+                                    <img id="current_image_preview" 
+                                         src="{{ restaurant.img_url or url_for('static', filename='images/1.jpg') }}" 
+                                         alt="当前餐厅图片" 
+                                         class="img-fluid rounded" 
+                                         style="max-height: 200px; object-fit: cover; width: 100%;">
+                                    <p class="small text-muted mt-2">当前图片</p>
+                                </div>
+                            </div>
+                            
+                            <!-- 图片上传 -->
+                            <div class="mb-3">
+                                <label for="restaurant_image" class="form-label">更换图片</label>
+                                <input type="file" class="form-control" id="restaurant_image" name="restaurant_image" 
+                                       accept="image/*" onchange="previewImage(this)">
+                                <div class="form-text">支持 JPG、PNG、GIF 格式</div>
+                            </div>
+                            
+                            <!-- 新图片预览 -->
+                            <div id="new_image_preview" style="display: none;" class="mt-3">
+                                <div class="text-center">
+                                    <img id="new_image" src="" alt="新图片预览" 
+                                         class="img-fluid rounded" 
+                                         style="max-height: 200px; object-fit: cover; width: 100%;">
+                                    <p class="small text-success mt-2">新图片预览</p>
+                                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="clearImagePreview()">
+                                        <i class="fas fa-times"></i> 取消选择
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <!-- 餐厅统计信息 -->
+                            <div class="mt-4">
+                                <h6 class="text-muted">餐厅统计</h6>
+                                <div class="small">
+                                    <div class="d-flex justify-content-between mb-1">
+                                        <span>评分:</span>
+                                        <span>
+                                            {% if restaurant.rating and restaurant.rating > 0 %}
+                                                <strong>{{ "%.1f"|format(restaurant.rating) }}/10</strong>
+                                            {% else %}
+                                                <span class="text-muted">暂无评分</span>
+                                            {% endif %}
+                                        </span>
+                                    </div>
+                                    <div class="d-flex justify-content-between">
+                                        <span>评论数:</span>
+                                        <span><strong>{{ restaurant.review_count or 0 }}</strong> 条</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <hr class="my-4">
+                    
+                    <div class="d-flex justify-content-end">
+                        <a href="{{ url_for('merchant.my_restaurants') }}" class="btn btn-secondary me-2">
+                            <i class="fas fa-times me-1"></i>取消
+                        </a>
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-save me-1"></i>保存修改
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function previewImage(input) {
+    const file = input.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            document.getElementById('new_image').src = e.target.result;
+            document.getElementById('new_image_preview').style.display = 'block';
+        }
+        reader.readAsDataURL(file);
+    } else {
+        clearImagePreview();
+    }
+}
+
+function clearImagePreview() {
+    document.getElementById('restaurant_image').value = '';
+    document.getElementById('new_image_preview').style.display = 'none';
+    document.getElementById('new_image').src = '';
+}
+
+// 动态加载餐厅类别
+document.addEventListener('DOMContentLoaded', function() {
+    const currentType = '{{ restaurant.type }}';
+    
+    fetch('/api/restaurant_categories')
+        .then(response => response.json())
+        .then(data => {
+            const typeSelect = document.getElementById('type');
+            
+            if (data.categories && data.categories.length > 0) {
+                data.categories.forEach(category => {
+                    const option = document.createElement('option');
+                    option.value = category.name;
+                    option.textContent = category.name;
+                    
+                    if (category.name === currentType) {
+                        option.selected = true;
+                    }
+                    
+                    typeSelect.appendChild(option);
+                });
+                
+                // 如果当前类型不在列表中，添加一个选项
+                if (currentType && !data.categories.some(cat => cat.name === currentType)) {
+                    const option = document.createElement('option');
+                    option.value = currentType;
+                    option.textContent = currentType + ' (原有类型)';
+                    option.selected = true;
+                    typeSelect.appendChild(option);
+                }
+            } else {
+                // 使用默认类别
+                const defaultCategories = ['中餐', '西餐', '日料', '韩料', '川菜', '粤菜', '湘菜', '鲁菜', '火锅', '烧烤', '快餐', '咖啡厅', '甜品店', '其他'];
+                defaultCategories.forEach(category => {
+                    const option = document.createElement('option');
+                    option.value = category;
+                    option.textContent = category;
+                    
+                    if (category === currentType) {
+                        option.selected = true;
+                    }
+                    
+                    typeSelect.appendChild(option);
+                });
+                
+                // 如果当前类型不在默认列表中，添加一个选项
+                if (currentType && !defaultCategories.includes(currentType)) {
+                    const option = document.createElement('option');
+                    option.value = currentType;
+                    option.textContent = currentType + ' (原有类型)';
+                    option.selected = true;
+                    typeSelect.appendChild(option);
+                }
+            }
+        })
+        .catch(error => {
+            console.error('加载餐厅类别失败:', error);
+        });
+});
+
+// 表单验证
+document.querySelector('form').addEventListener('submit', function(e) {
+    const name = document.getElementById('name').value.trim();
+    const type = document.getElementById('type').value;
+    const address = document.getElementById('address').value.trim();
+    
+    if (!name || !type || !address) {
+        e.preventDefault();
+        alert('请填写所有必需字段（餐厅名称、类型、地址）');
+        return false;
+    }
+});
+</script>
+{% endblock %}

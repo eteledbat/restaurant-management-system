@@ -1,0 +1,95 @@
+{% extends 'base.html' %}
+
+{% block title %}管理评论 - 餐饮信息管理系统{% endblock %}
+
+{% block content %}
+<h2 class="mb-4">管理评论</h2>
+
+<div class="card">
+    <div class="card-body">
+        {% if reviews %}
+        {% for review in reviews %}
+        <div class="border-bottom pb-3 mb-3">
+            <div class="row">
+                <div class="col-md-8">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <div>
+                            <h6 class="mb-1">{{ review.username }}</h6>
+                            <small class="text-muted">{{ review.restaurant_name }}</small>
+                        </div>
+                        <div class="text-end">
+                            <span class="badge bg-primary">{{ review.rating }}/10</span><br>
+                            <small class="text-muted">{{ review.review_time.strftime('%Y-%m-%d %H:%M') }}</small>
+                        </div>
+                    </div>
+                    <p class="mb-2">{{ review.comment }}</p>
+                    
+                    {% if review.reply_content %}
+                    <div class="mt-2 p-2 bg-light rounded">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div class="flex-grow-1">
+                                <small class="text-muted">商家回复 ({{ review.reply_time.strftime('%Y-%m-%d %H:%M') }}):</small>
+                                <p class="mb-0">{{ review.reply_content }}</p>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-outline-danger ms-2" 
+                                    onclick="deleteReply({{ review.reply_id }}, '{{ review.restaurant_name }}')">
+                                删除回复
+                            </button>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <div class="col-md-4 text-end">
+                    <div class="btn-group-vertical btn-group-sm">
+                        <a href="{{ url_for('restaurant.detail', rest_id=review.rest_id) }}" class="btn btn-outline-primary">查看餐厅</a>
+                        <button type="button" class="btn btn-outline-danger" onclick="deleteReview({{ review.review_id }}, '{{ review.username }}')">
+                            删除评论
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+        {% else %}
+        <p class="text-muted text-center">暂无评论</p>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+function deleteReview(reviewId, username) {
+    if (confirm('确定要删除用户 "' + username + '" 的这条评论吗？')) {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '/admin/delete_review/' + reviewId;
+        
+        const csrfInput = document.createElement('input');
+        csrfInput.type = 'hidden';
+        csrfInput.name = 'csrf_token';
+        csrfInput.value = '{{ csrf_token() }}';
+        
+        form.appendChild(csrfInput);
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+
+function deleteReply(replyId, restaurantName) {
+    if (confirm('确定要删除餐厅 "' + restaurantName + '" 的回复吗？')) {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '/admin/delete_reply/' + replyId;
+        
+        const csrfInput = document.createElement('input');
+        csrfInput.type = 'hidden';
+        csrfInput.name = 'csrf_token';
+        csrfInput.value = '{{ csrf_token() }}';
+        
+        form.appendChild(csrfInput);
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+</script>
+{% endblock %}

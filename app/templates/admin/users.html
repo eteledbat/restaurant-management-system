@@ -1,0 +1,84 @@
+{% extends 'base.html' %}
+
+{% block title %}管理用户 - 餐饮信息管理系统{% endblock %}
+
+{% block content %}
+<h2 class="mb-4">管理用户</h2>
+
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>用户名</th>
+                        <th>邮箱</th>
+                        <th>电话</th>
+                        <th>类型</th>
+                        <th>注册时间</th>
+                        <th>状态</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in users %}
+                    <tr {% if user.is_deleted %}class="table-secondary"{% endif %}>
+                        <td>{{ user.username }}</td>
+                        <td>{{ user.email }}</td>
+                        <td>{{ user.phone or '未填写' }}</td>
+                        <td>
+                            {% if user.user_type == 'admin' %}
+                                <span class="badge bg-danger">管理员</span>
+                            {% elif user.user_type == 'merchant' %}
+                                <span class="badge bg-warning">商家</span>
+                            {% else %}
+                                <span class="badge bg-primary">用户</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ user.join_date.strftime('%Y-%m-%d') }}</td>
+                        <td>
+                            {% if user.is_deleted %}
+                                <span class="badge bg-secondary">已禁用</span>
+                            {% else %}
+                                <span class="badge bg-success">正常</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if user.user_id != current_user.id %}
+                            <button type="button" class="btn btn-sm {% if user.is_deleted %}btn-outline-success{% else %}btn-outline-warning{% endif %}" onclick="toggleUserStatus({{ user.user_id }}, '{{ user.username }}', {{ user.is_deleted|lower }})">
+                                {% if user.is_deleted %}启用{% else %}禁用{% endif %}
+                            </button>
+                            {% else %}
+                            <span class="text-muted">当前用户</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+function toggleUserStatus(userId, username, isDeleted) {
+    const action = isDeleted ? '启用' : '禁用';
+    const confirmMessage = '确定要' + action + '用户 "' + username + '" 吗？';
+    
+    if (confirm(confirmMessage)) {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '/admin/toggle_user_status/' + userId;
+        
+        const csrfInput = document.createElement('input');
+        csrfInput.type = 'hidden';
+        csrfInput.name = 'csrf_token';
+        csrfInput.value = '{{ csrf_token() }}';
+        
+        form.appendChild(csrfInput);
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,170 @@
+{% extends 'base.html' %}
+
+{% block title %}管理餐厅商户 - {{ restaurant.name }}{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h2>
+                    <i class="fas fa-users text-primary me-2"></i>
+                    管理餐厅商户
+                </h2>
+                <p class="text-muted mb-0">
+                    餐厅: <strong>{{ restaurant.name }}</strong> | 
+                    地址: {{ restaurant.address }}
+                </p>
+            </div>
+            <div>
+                <a href="{{ url_for('restaurant.detail', rest_id=restaurant.rest_id) }}" 
+                   class="btn btn-outline-info btn-sm me-2" target="_blank">
+                    <i class="fas fa-eye me-1"></i>查看餐厅
+                </a>
+                <a href="{{ url_for('admin.manage_restaurants') }}" class="btn btn-secondary btn-sm">
+                    <i class="fas fa-arrow-left me-1"></i>返回餐厅列表
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- 当前管理商户 -->
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-user-tie text-success me-2"></i>
+                    当前管理商户 ({{ current_merchants|length }})
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if current_merchants %}
+                <div class="list-group list-group-flush">
+                    {% for merchant in current_merchants %}
+                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="mb-1">{{ merchant.username }}</h6>
+                            <small class="text-muted">
+                                {% if merchant.email %}📧 {{ merchant.email }}{% endif %}
+                                {% if merchant.phone %}<br>📱 {{ merchant.phone }}{% endif %}
+                            </small>
+                        </div>
+                        <div>
+                            <form method="POST" action="{{ url_for('admin.remove_merchant_from_restaurant') }}" 
+                                  style="display: inline;">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                <input type="hidden" name="restaurant_id" value="{{ restaurant.rest_id }}">
+                                <input type="hidden" name="merchant_id" value="{{ merchant.user_id }}">
+                                <button type="submit" class="btn btn-sm btn-outline-danger" 
+                                        onclick="return confirm('确定要移除商户 {{ merchant.username }} 的管理权限吗？\n\n移除后该商户将无法管理此餐厅。')">
+                                    <i class="fas fa-times"></i> 移除
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-user-slash fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">暂无管理商户</h5>
+                    <p class="text-muted">从右侧商户列表中选择商户进行分配</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- 所有商户列表 -->
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-users text-info me-2"></i>
+                    系统商户列表
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if all_merchants %}
+                <div class="list-group list-group-flush" style="max-height: 400px; overflow-y: auto;">
+                    {% for merchant in all_merchants %}
+                    <div class="list-group-item d-flex justify-content-between align-items-center
+                                {% if merchant.is_assigned %}list-group-item-success{% endif %}">
+                        <div>
+                            <h6 class="mb-1">
+                                {{ merchant.username }}
+                                {% if merchant.is_assigned %}
+                                    <span class="badge bg-success ms-2">已分配</span>
+                                {% endif %}
+                            </h6>
+                            <small class="text-muted">
+                                {% if merchant.email %}📧 {{ merchant.email }}{% endif %}
+                                {% if merchant.phone %}<br>📱 {{ merchant.phone }}{% endif %}
+                            </small>
+                        </div>
+                        <div>
+                            {% if not merchant.is_assigned %}
+                            <form method="POST" action="{{ url_for('admin.assign_merchant_to_restaurant') }}" 
+                                  style="display: inline;">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                <input type="hidden" name="restaurant_id" value="{{ restaurant.rest_id }}">
+                                <input type="hidden" name="merchant_id" value="{{ merchant.user_id }}">
+                                <button type="submit" class="btn btn-sm btn-success"
+                                        onclick="return confirm('确定要将商户 {{ merchant.username }} 分配给餐厅 {{ restaurant.name }} 吗？\n\n分配后该商户可以管理此餐厅。')">
+                                    <i class="fas fa-plus"></i> 分配
+                                </button>
+                            </form>
+                            {% else %}
+                            <span class="text-success">
+                                <i class="fas fa-check"></i> 已管理
+                            </span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">暂无商户用户</h5>
+                    <p class="text-muted">系统中还没有商户用户</p>
+                    <a href="{{ url_for('admin.manage_users') }}" class="btn btn-outline-primary btn-sm">
+                        <i class="fas fa-user-plus me-1"></i>去用户管理
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 操作指南 -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="alert alert-info">
+            <h6 class="alert-heading">
+                <i class="fas fa-info-circle me-2"></i>
+                操作说明
+            </h6>
+            <div class="row">
+                <div class="col-md-6">
+                    <ul class="mb-0">
+                        <li><strong>分配商户：</strong>在右侧商户列表中点击"分配"按钮</li>
+                        <li><strong>移除商户：</strong>在左侧当前商户列表中点击"移除"按钮</li>
+                        <li><strong>多商户管理：</strong>一家餐厅可以分配给多个商户同时管理</li>
+                    </ul>
+                </div>
+                <div class="col-md-6">
+                    <ul class="mb-0">
+                        <li><strong>商户权限：</strong>被分配的商户可以编辑餐厅信息、管理菜品</li>
+                        <li><strong>实时更新：</strong>分配或移除后商户立即获得或失去管理权限</li>
+                        <li><strong>安全提示：</strong>每次操作都会有确认提示，避免误操作</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

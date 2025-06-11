@@ -1,0 +1,60 @@
+{% extends 'base.html' %}
+
+{% block title %}编辑类别 - 管理后台{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>编辑类别</h2>
+    <a href="{{ url_for('admin.manage_categories') }}" class="btn btn-outline-secondary">
+        <i class="fas fa-arrow-left me-1"></i>返回类别管理
+    </a>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-edit me-2"></i>编辑类别信息
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <!-- 如果应用启用了CSRF保护，添加这行 -->
+                    {% if csrf_token %}
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                    {% endif %}
+                    
+                    <div class="mb-3">
+                        <label for="category_name" class="form-label">类别名称 *</label>
+                        <input type="text" class="form-control" id="category_name" name="category_name" 
+                               value="{{ category.category_name }}" placeholder="例：东南亚菜、素食、茶餐厅" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="description" class="form-label">类别描述</label>
+                        <textarea class="form-control" id="description" name="description" rows="4"
+                                  placeholder="简要描述这个类别的特点（可选）">{{ category.description or '' }}</textarea>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <small class="text-muted">
+                            <i class="fas fa-info-circle me-1"></i>
+                            创建时间：{{ category.created_at.strftime('%Y-%m-%d %H:%M:%S') }}
+                        </small>
+                    </div>
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{{ url_for('admin.manage_categories') }}" class="btn btn-secondary me-md-2">
+                            <i class="fas fa-times me-1"></i>取消
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-1"></i>保存修改
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

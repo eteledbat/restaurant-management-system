@@ -1,0 +1,83 @@
+{% extends 'base.html' %}
+
+{% block title %}编辑菜品 - 餐饮信息管理系统{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h4>编辑菜品 - {{ dish.restaurant_name }}</h4>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('merchant.update_dish', dish_id=dish.dish_id) }}" enctype="multipart/form-data">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="name" class="form-label">菜品名称 *</label>
+                                <input type="text" class="form-control" id="name" name="name" value="{{ dish.name }}" required>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="price" class="form-label">价格 *</label>
+                                <input type="number" class="form-control" id="price" name="price" value="{{ dish.price }}" step="0.01" min="0" required>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="dish_image" class="form-label">更换菜品图片</label>
+                                <input type="file" class="form-control" id="dish_image" name="dish_image" accept="image/*">
+                                <small class="form-text text-muted">留空则保持原图片</small>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">当前图片</label>
+                                <div>
+                                    {% if dish.img_url %}
+                                    <img src="{{ dish.img_url }}" alt="{{ dish.name }}" class="img-thumbnail" style="max-width: 200px; max-height: 200px;">
+                                    {% else %}
+                                    <img src="{{ url_for('static', filename='images/2.jpg') }}" alt="默认图片" class="img-thumbnail" style="max-width: 200px; max-height: 200px;">
+                                    {% endif %}
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <img id="image_preview" src="#" alt="新图片预览" style="max-width: 200px; max-height: 200px; display: none;" class="img-thumbnail">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="description" class="form-label">描述</label>
+                        <textarea class="form-control" id="description" name="description" rows="3">{{ dish.description or '' }}</textarea>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('merchant.manage_dishes') }}" class="btn btn-secondary">返回</a>
+                        <button type="submit" class="btn btn-primary">保存修改</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// 图片预览功能
+document.getElementById('dish_image').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const preview = document.getElementById('image_preview');
+            preview.src = e.target.result;
+            preview.style.display = 'block';
+        };
+        reader.readAsDataURL(file);
+    }
+});
+</script>
+{% endblock %}

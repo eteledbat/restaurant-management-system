@@ -1,0 +1,308 @@
+{% extends 'base.html' %}
+
+{% macro build_sort_url(sort_type) %}
+{{ url_for('restaurant.restaurant_list', 
+          category_name=selected_category if selected_category else None, 
+          search=search_keyword if search_keyword else None, 
+          sort=sort_type) }}
+{% endmacro %}
+
+{% block title %}餐厅列表{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <!-- 侧边栏筛选 -->
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-filter me-2"></i>筛选条件
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <!-- 搜索框 -->
+                    <form method="GET" class="mb-3">
+                        <div class="input-group">
+                            <input type="text" class="form-control" name="search" 
+                                   placeholder="搜索餐厅名称或地址" 
+                                   value="{{ search_keyword or '' }}">
+                            <button class="btn btn-outline-primary" type="submit">
+                                <i class="fas fa-search"></i>
+                            </button>
+                        </div>
+                        {% if selected_category %}
+                        <input type="hidden" name="category_name" value="{{ selected_category }}">
+                        {% endif %}
+                    </form>
+                    
+                    <!-- 分类筛选 -->
+                    <div class="mb-3">
+                        <h6 class="fw-bold mb-2">餐厅分类</h6>
+                        <div class="list-group list-group-flush">
+                            <!-- 全部分类 -->
+                            <a href="{{ url_for('restaurant.restaurant_list') }}{% if search_keyword %}?search={{ search_keyword }}{% endif %}" 
+                               class="list-group-item list-group-item-action {% if not selected_category %}active{% endif %}">
+                                <i class="fas fa-utensils me-2"></i>全部餐厅
+                            </a>
+                            
+                            <!-- 具体分类 -->
+                            {% for category in categories %}
+                            <a href="{{ url_for('restaurant.restaurant_list', category_name=category.category_name) }}{% if search_keyword %}&search={{ search_keyword }}{% endif %}" 
+                               class="list-group-item list-group-item-action {% if selected_category == category.category_name %}active{% endif %}">
+                                <i class="fas fa-tag me-2"></i>{{ category.category_name }}
+                            </a>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    
+                    <!-- 清除筛选 -->
+                    {% if selected_category or search_keyword %}
+                    <div class="mt-3">
+                        <a href="{{ url_for('restaurant.restaurant_list') }}" class="btn btn-outline-secondary btn-sm w-100">
+                            <i class="fas fa-times me-1"></i>清除筛选
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- 主体区域 - 搜索结果显示 -->
+        <div class="col-md-9">
+            <!-- 页面标题和结果统计 -->
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div>
+                    <h2>餐厅列表</h2>
+                    {% if selected_category %}
+                    <small class="text-muted">分类：{{ selected_category }}</small>
+                    {% endif %}
+                    {% if search_keyword %}
+                    <small class="text-muted">搜索：{{ search_keyword }}</small>
+                    {% endif %}
+                </div>
+                <!-- 在排序部分，大约第80-90行左右，修改为： -->
+                <div class="d-flex align-items-center gap-3">
+                    <span class="badge bg-info fs-6">共 {{ restaurants|length }} 家餐厅</span>
+                    <!-- 排序选项 -->
+                    <div class="dropdown">
+                        <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-sort me-1"></i>排序
+                            {% if current_sort == 'rating' %}(按评分)
+                            {% elif current_sort == 'name' %}(按名称)
+                            {% elif current_sort == 'reviews' %}(按评论数)
+                            {% endif %}
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li>
+                                <a class="dropdown-item {% if current_sort == 'rating' %}active{% endif %}" 
+                                  href="{{ build_sort_url('rating') }}">
+                                    <i class="fas fa-star me-2"></i>按评分排序
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item {% if current_sort == 'name' %}active{% endif %}" 
+                                  href="{{ build_sort_url('name') }}">
+                                    <i class="fas fa-sort-alpha-down me-2"></i>按名称排序
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item {% if current_sort == 'reviews' %}active{% endif %}" 
+                                  href="{{ build_sort_url('reviews') }}">
+                                    <i class="fas fa-comment me-2"></i>按评论数排序
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 搜索结果主体区域 -->
+            {% if restaurants %}
+            <div class="row">
+                {% for restaurant in restaurants %}
+                <div class="col-lg-6 col-xl-4 mb-4">
+                    <div class="card h-100 shadow-sm restaurant-card">
+                        {% if restaurant.img_url %}
+                        <img src="{{ restaurant.img_url }}" class="card-img-top" alt="{{ restaurant.name }}" style="height: 200px; object-fit: cover;">
+                        {% else %}
+                        <div class="card-img-top bg-light d-flex align-items-center justify-content-center" style="height: 200px;">
+                            <i class="fas fa-utensils fa-3x text-muted"></i>
+                        </div>
+                        {% endif %}
+                        
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <h5 class="card-title mb-0">{{ restaurant.name }}</h5>
+                                {% if restaurant.type %}
+                                <span class="badge bg-secondary">{{ restaurant.type }}</span>
+                                {% endif %}
+                            </div>
+                            
+                            <p class="text-muted mb-2">
+                                <i class="fas fa-map-marker-alt me-1"></i>
+                                {{ restaurant.address }}
+                            </p>
+                            
+                            {% if restaurant.phone %}
+                            <p class="text-muted mb-2">
+                                <i class="fas fa-phone me-1"></i>
+                                {{ restaurant.phone }}
+                            </p>
+                            {% endif %}
+                            
+                            {% if restaurant.opening_hours %}
+                            <p class="text-muted mb-2">
+                                <i class="fas fa-clock me-1"></i>
+                                {{ restaurant.opening_hours }}
+                            </p>
+                            {% endif %}
+                            
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <div>
+                                    {% if restaurant.avg_rating and restaurant.avg_rating > 0 %}
+                                    <span class="text-warning">
+                                        {% for i in range(1, 6) %}
+                                            {% if restaurant.avg_rating >= i %}
+                                                <i class="fas fa-star"></i>
+                                            {% elif restaurant.avg_rating >= (i - 0.5) %}
+                                                <i class="fas fa-star-half-alt"></i>
+                                            {% else %}
+                                                <i class="far fa-star"></i>
+                                            {% endif %}
+                                        {% endfor %}
+                                    </span>
+                                    <small class="text-muted ms-1">({{ "%.1f"|format(restaurant.avg_rating) }})</small>
+                                    {% else %}
+                                    <span class="text-muted">暂无评分</span>
+                                    {% endif %}
+                                </div>
+                                <div class="text-end">
+                                    <small class="text-muted d-block">{{ restaurant.review_count or 0 }} 条评论</small>
+                                    {% if restaurant.star_count %}
+                                    <small class="text-muted">{{ restaurant.star_count }} 收藏</small>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            
+                            <div class="d-flex gap-2">
+                                <a href="{{ url_for('restaurant.detail', rest_id=restaurant.rest_id) }}" 
+                                   class="btn btn-primary btn-sm flex-fill">
+                                    <i class="fas fa-eye me-1"></i>查看详情
+                                </a>
+                                {% if current_user.is_authenticated and current_user.user_type == 'user' %}
+                                <button class="btn btn-outline-danger btn-sm" 
+                                        onclick="toggleFavorite({{ restaurant.rest_id }})"
+                                        title="收藏餐厅">
+                                    <i class="far fa-heart"></i>
+                                </button>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            
+            <!-- 分页 (如果需要的话) -->
+            {% if restaurants|length > 12 %}
+            <nav aria-label="餐厅列表分页">
+                <ul class="pagination justify-content-center">
+                    <li class="page-item">
+                        <a class="page-link" href="#" aria-label="Previous">
+                            <span aria-hidden="true">&laquo;</span>
+                        </a>
+                    </li>
+                    <li class="page-item active"><a class="page-link" href="#">1</a></li>
+                    <li class="page-item"><a class="page-link" href="#">2</a></li>
+                    <li class="page-item"><a class="page-link" href="#">3</a></li>
+                    <li class="page-item">
+                        <a class="page-link" href="#" aria-label="Next">
+                            <span aria-hidden="true">&raquo;</span>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+            {% endif %}
+            
+            {% else %}
+            <!-- 无结果提示 -->
+            <div class="text-center py-5">
+                <i class="fas fa-search fa-4x text-muted mb-4"></i>
+                <h4 class="text-muted">没有找到餐厅</h4>
+                <p class="text-muted lead">
+                    {% if selected_category and search_keyword %}
+                    在分类"{{ selected_category }}"中搜索"{{ search_keyword }}"没有找到结果
+                    {% elif selected_category %}
+                    分类"{{ selected_category }}"中暂时没有餐厅
+                    {% elif search_keyword %}
+                    搜索"{{ search_keyword }}"没有找到结果
+                    {% else %}
+                    暂时没有餐厅信息
+                    {% endif %}
+                </p>
+                <div class="mt-4">
+                    {% if selected_category or search_keyword %}
+                    <a href="{{ url_for('restaurant.restaurant_list') }}" class="btn btn-primary me-2">
+                        <i class="fas fa-list me-1"></i>查看全部餐厅
+                    </a>
+                    {% endif %}
+                    {% if search_keyword %}
+                    <a href="{{ url_for('restaurant.restaurant_list', category_name=selected_category) if selected_category else url_for('restaurant.restaurant_list') }}" class="btn btn-outline-secondary">
+                        <i class="fas fa-times me-1"></i>清除搜索
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- 收藏功能的 JavaScript -->
+<script>
+function toggleFavorite(restId) {
+    fetch('{{ url_for("restaurant.toggle_favorite") }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token() if csrf_token else "" }}'
+        },
+        body: JSON.stringify({rest_id: restId})
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // 更新按钮状态
+            location.reload();
+        } else {
+            alert(data.message || '操作失败');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('操作失败');
+    });
+}
+</script>
+
+<style>
+.restaurant-card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.restaurant-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.list-group-item-action:hover {
+    background-color: #f8f9fa;
+}
+
+.list-group-item-action.active {
+    background-color: #007bff;
+    border-color: #007bff;
+}
+</style>
+{% endblock %}
