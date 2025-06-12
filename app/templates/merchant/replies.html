@@ -19,113 +19,90 @@
     <div class="col-12 mb-4">
         <div class="card">
             <div class="card-header">
-                <div class="row align-items-center">
-                    <div class="col-md-6">
-                        <h6 class="mb-0">
-                            <i class="fas fa-store me-1"></i>
-                            {{ review.restaurant_name }}
-                        </h6>
-                    </div>
-                    <div class="col-md-6 text-md-end">
-                        <small class="text-muted">
-                            {{ review.review_date.strftime('%Y-%m-%d %H:%M') if review.review_date else '未知时间' }}
-                        </small>
-                    </div>
+                <div class="d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0">
+                        <i class="fas fa-store me-1"></i>
+                        {{ review.restaurant_name }}
+                    </h6>
+                    <small class="text-muted">
+                        {{ review.review_date.strftime('%Y-%m-%d %H:%M') if review.review_date else '未知时间' }}
+                    </small>
                 </div>
             </div>
             <div class="card-body">
-                <!-- 原始评论 -->
-                <div class="row mb-3">
-                    <div class="col-md-8">
-                        <div class="d-flex align-items-start">
-                            <div class="flex-shrink-0">
-                                <i class="fas fa-user-circle fa-2x text-secondary"></i>
+                <!-- 用户评论 -->
+                <div class="user-review mb-3 p-3" style="background: #f8f9fa; border-radius: 8px;">
+                    <div class="d-flex align-items-start">
+                        <i class="fas fa-user-circle fa-2x text-secondary me-3"></i>
+                        <div class="flex-grow-1">
+                            <h6 class="mb-1">{{ review.reviewer_name or '匿名用户' }}</h6>
+                            <div class="mb-2">
+                                {% for i in range(1, 11) %}
+                                    {% if i <= (review.rating or 0) %}⭐{% else %}☆{% endif %}
+                                {% endfor %}
+                                <span class="ms-2 small text-muted">({{ review.rating or 0 }}/10)</span>
                             </div>
-                            <div class="flex-grow-1 ms-3">
-                                <div class="d-flex justify-content-between align-items-start">
-                                    <div>
-                                        <h6 class="mb-1">{{ review.reviewer_name or '匿名用户' }}</h6>
-                                        <div class="mb-2">
-                                            {% for i in range(1, 11) %}
-                                                {% if i <= (review.rating or 0) %}
-                                                    <span class="text-warning">⭐</span>
-                                                {% else %}
-                                                    <span class="text-muted">☆</span>
-                                                {% endif %}
-                                            {% endfor %}
-                                            <span class="ms-2 small text-muted">({{ review.rating or 0 }}/10)</span>
-                                        </div>
-                                        <p class="mb-0">{{ review.review_text or '用户没有留下评论内容' }}</p>
-                                    </div>
-                                </div>
-                            </div>
+                            <p class="mb-0">{{ review.review_text or '用户没有留下评论内容' }}</p>
                         </div>
                     </div>
                 </div>
 
-                <!-- 商家回复区域 -->
-                <div class="border-top pt-3">
-                    {% if review.reply_id %}
+                <!-- 回复管理区域 - 单图层设计 -->
+                <div class="reply-management p-3" style="background: #e8f5e8; border: 1px solid #c3e6c3; border-radius: 8px;">
+                    {% if review.reply_id and review.reply_text %}
                     <!-- 已有回复 -->
-                    <div class="d-flex align-items-start">
-                        <div class="flex-shrink-0">
-                            <i class="fas fa-store fa-2x text-success"></i>
-                        </div>
-                        <div class="flex-grow-1 ms-3">
-                            <div class="d-flex justify-content-between align-items-start">
-                                <div class="flex-grow-1">
-                                    <h6 class="mb-1 text-success">
-                                        <i class="fas fa-reply me-1"></i>
-                                        商家回复
-                                    </h6>
-                                    <p class="mb-2">{{ review.reply_text }}</p>
-                                    <small class="text-muted">
-                                        回复时间: {{ review.reply_date.strftime('%Y-%m-%d %H:%M') if review.reply_date else '未知' }}
-                                    </small>
-                                </div>
-                                <div class="ms-3">
-                                    <a href="{{ url_for('merchant.edit_reply', reply_id=review.reply_id) }}" 
-                                       class="btn btn-sm btn-outline-warning me-2">
-                                        <i class="fas fa-edit"></i> 编辑
-                                    </a>
-                                    <button type="button" class="btn btn-sm btn-outline-danger" 
-                                            onclick="deleteReply({{ review.reply_id }})">
-                                        <i class="fas fa-trash"></i> 删除
-                                    </button>
-                                </div>
+                    <div class="existing-reply mb-3">
+                        <div class="d-flex align-items-start">
+                            <i class="fas fa-store fa-2x text-success me-3"></i>
+                            <div class="flex-grow-1">
+                                <h6 class="text-success mb-1">
+                                    <i class="fas fa-reply me-1"></i>您的回复
+                                </h6>
+                                <p class="mb-2">{{ review.reply_text }}</p>
+                                <small class="text-muted">
+                                    {{ review.reply_date.strftime('%Y-%m-%d %H:%M') if review.reply_date else '未知时间' }}
+                                </small>
                             </div>
-                        </div>
-                    </div>
-                    {% else %}
-                    <!-- 还未回复 -->
-                    <div class="alert alert-light border-dashed">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div>
-                                <i class="fas fa-comment-slash text-muted me-2"></i>
-                                <span class="text-muted">还未回复这条评论</span>
+                            <div class="ms-3">
+                                <a href="{{ url_for('merchant.edit_reply', reply_id=review.reply_id) }}" 
+                                   class="btn btn-sm btn-outline-warning me-2">编辑</a>
+                                <button type="button" class="btn btn-sm btn-outline-danger" 
+                                        onclick="deleteReply({{ review.reply_id }})">删除</button>
                             </div>
-                            <button type="button" class="btn btn-success btn-sm" 
-                                    data-bs-toggle="modal" 
-                                    data-bs-target="#replyModal" 
-                                    data-review-id="{{ review.review_id }}"
-                                    data-restaurant-name="{{ review.restaurant_name }}"
-                                    data-reviewer-name="{{ review.reviewer_name or '匿名用户' }}"
-                                    data-review-text="{{ review.review_text or '用户没有留下评论内容' }}"
-                                    data-rating="{{ review.rating or 0 }}">
-                                <i class="fas fa-reply me-1"></i>
-                                立即回复
-                            </button>
                         </div>
                     </div>
                     {% endif %}
+
+                    <!-- 操作区域 -->
+                    <div class="action-row d-flex justify-content-between align-items-center">
+                        <div>
+                            <i class="fas fa-info-circle text-primary me-2"></i>
+                            {% if review.reply_id %}
+                                <span class="text-success fw-bold">已回复 (ID: {{ review.review_id }})</span>
+                            {% else %}
+                                <span class="text-warning fw-bold">待回复 (ID: {{ review.review_id }})</span>
+                            {% endif %}
+                        </div>
+                        <div>
+                            {% if not review.reply_id %}
+                                <button type="button" 
+                                        class="btn btn-success btn-sm"
+                                        onclick="openReplyForm({{ review.review_id }}, '{{ review.restaurant_name }}', '{{ review.reviewer_name or '匿名用户' }}', '{{ review.review_text or '无内容' }}', {{ review.rating or 0 }})">
+                                    <i class="fas fa-reply me-1"></i>立即回复
+                                </button>
+                            {% else %}
+                                <span class="badge bg-success">
+                                    <i class="fas fa-check-circle me-1"></i>已完成
+                                </span>
+                            {% endif %}
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
     {% endfor %}
 </div>
-
-<!-- 分页或加载更多按钮可以在这里添加 -->
 
 {% else %}
 <div class="text-center py-5">
@@ -138,121 +115,64 @@
 </div>
 {% endif %}
 
-<!-- 回复模态框 -->
-<div class="modal fade" id="replyModal" tabindex="-1" aria-labelledby="replyModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
+<!-- 简化的回复模态框 -->
+<div class="modal fade" id="replyModal" tabindex="-1">
+    <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="replyModalLabel">
-                    <i class="fas fa-reply text-success me-2"></i>
-                    回复评论
+                <h5 class="modal-title">
+                    <i class="fas fa-reply text-success me-2"></i>回复评论
                 </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <form method="POST" action="{{ url_for('merchant.add_reply') }}" id="replyForm">
+            <form method="POST" action="{{ url_for('merchant.add_reply') }}">
                 <div class="modal-body">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                     <input type="hidden" name="review_id" id="modal_review_id">
                     
-                    <!-- 评论信息显示 -->
-                    <div class="alert alert-info mb-3">
-                        <h6 class="alert-heading">原始评论</h6>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <p class="mb-1"><strong>餐厅:</strong> <span id="modal_restaurant_name"></span></p>
-                                <p class="mb-1"><strong>评论者:</strong> <span id="modal_reviewer_name"></span></p>
-                                <p class="mb-0"><strong>评分:</strong> <span id="modal_rating_display"></span></p>
-                            </div>
-                            <div class="col-md-6">
-                                <p class="mb-1"><strong>评论内容:</strong></p>
-                                <p class="mb-0" id="modal_review_text"></p>
-                            </div>
-                        </div>
+                    <!-- 评论信息 -->
+                    <div class="mb-3 p-3" style="background: #f8f9fa; border-radius: 6px;">
+                        <h6>原始评论</h6>
+                        <p><strong>餐厅:</strong> <span id="modal_restaurant"></span></p>
+                        <p><strong>用户:</strong> <span id="modal_reviewer"></span></p>
+                        <p><strong>评分:</strong> <span id="modal_rating"></span></p>
+                        <p><strong>内容:</strong> <span id="modal_content"></span></p>
                     </div>
                     
-                    <!-- 回复内容 -->
+                    <!-- 回复输入 -->
                     <div class="mb-3">
-                        <label for="reply_content" class="form-label">
-                            <i class="fas fa-comment me-1"></i>
-                            回复内容 *
-                        </label>
+                        <label for="reply_content" class="form-label">回复内容</label>
                         <textarea class="form-control" id="reply_content" name="reply_content" 
-                                  rows="4" required placeholder="请输入您的回复内容..."></textarea>
-                        <div class="form-text">
-                            回复内容应当礼貌、专业，针对用户的评论给出合适的回应。
-                        </div>
-                    </div>
-                    
-                    <!-- 回复建议 -->
-                    <div class="alert alert-warning">
-                        <h6 class="alert-heading">
-                            <i class="fas fa-lightbulb me-1"></i>
-                            回复建议
-                        </h6>
-                        <ul class="mb-0 small">
-                            <li>感谢用户的评论和光临</li>
-                            <li>如果是好评，表达感谢并邀请再次光临</li>
-                            <li>如果是差评，诚恳道歉并说明改进措施</li>
-                            <li>保持专业和礼貌的语调</li>
-                        </ul>
+                                  rows="4" required placeholder="请输入您的回复..."></textarea>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                        <i class="fas fa-times me-1"></i>取消
-                    </button>
-                    <button type="submit" class="btn btn-success">
-                        <i class="fas fa-paper-plane me-1"></i>发送回复
-                    </button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="submit" class="btn btn-success">发送回复</button>
                 </div>
             </form>
         </div>
     </div>
 </div>
 
+<!-- 极简JavaScript -->
 <script>
-// 处理回复模态框数据
-document.addEventListener('DOMContentLoaded', function() {
-    const replyModal = document.getElementById('replyModal');
+// 打开回复表单
+function openReplyForm(reviewId, restaurant, reviewer, content, rating) {
+    document.getElementById('modal_review_id').value = reviewId;
+    document.getElementById('modal_restaurant').textContent = restaurant;
+    document.getElementById('modal_reviewer').textContent = reviewer;
+    document.getElementById('modal_content').textContent = content;
+    document.getElementById('modal_rating').textContent = '⭐'.repeat(rating) + ` (${rating}/10)`;
     
-    replyModal.addEventListener('show.bs.modal', function (event) {
-        const button = event.relatedTarget;
-        
-        // 获取数据
-        const reviewId = button.getAttribute('data-review-id');
-        const restaurantName = button.getAttribute('data-restaurant-name');
-        const reviewerName = button.getAttribute('data-reviewer-name');
-        const reviewText = button.getAttribute('data-review-text');
-        const rating = button.getAttribute('data-rating');
-        
-        // 填充模态框
-        document.getElementById('modal_review_id').value = reviewId;
-        document.getElementById('modal_restaurant_name').textContent = restaurantName;
-        document.getElementById('modal_reviewer_name').textContent = reviewerName;
-        document.getElementById('modal_review_text').textContent = reviewText;
-        
-        // 生成星级显示
-        let starsHtml = '';
-        for (let i = 1; i <= 10; i++) {
-            if (i <= rating) {
-                starsHtml += '<span class="text-warning">⭐</span>';
-            } else {
-                starsHtml += '<span class="text-muted">☆</span>';
-            }
-        }
-        starsHtml += ` <span class="ms-2">(${rating}/10)</span>`;
-        document.getElementById('modal_rating_display').innerHTML = starsHtml;
-    });
-    
-    // 清空表单当模态框关闭时
-    replyModal.addEventListener('hidden.bs.modal', function () {
-        document.getElementById('reply_content').value = '';
-    });
-});
+    // 显示模态框
+    const modal = new bootstrap.Modal(document.getElementById('replyModal'));
+    modal.show();
+}
 
-// 删除回复确认
+// 删除回复
 function deleteReply(replyId) {
-    if (confirm('确定要删除这条回复吗？\n\n删除后用户将看不到您的回复。')) {
+    if (confirm('确定要删除这条回复吗？')) {
         const form = document.createElement('form');
         form.method = 'POST';
         form.action = '/merchant/delete_reply/' + replyId;
@@ -268,65 +188,27 @@ function deleteReply(replyId) {
     }
 }
 
-// 表单验证
-document.getElementById('replyForm').addEventListener('submit', function(e) {
-    const content = document.getElementById('reply_content').value.trim();
-    
-    if (!content) {
-        e.preventDefault();
-        alert('请输入回复内容');
-        return false;
-    }
-    
-    if (content.length < 5) {
-        e.preventDefault();
-        alert('回复内容至少需要5个字符');
-        return false;
-    }
-    
-    if (content.length > 1000) {
-        e.preventDefault();
-        alert('回复内容不能超过1000个字符');
-        return false;
-    }
-});
-
-// 字符计数器
-document.getElementById('reply_content').addEventListener('input', function() {
-    const maxLength = 1000;
-    const currentLength = this.value.length;
-    const remaining = maxLength - currentLength;
-    
-    // 创建或更新字符计数显示
-    let counter = document.getElementById('char-counter');
-    if (!counter) {
-        counter = document.createElement('div');
-        counter.id = 'char-counter';
-        counter.className = 'form-text text-end';
-        this.parentNode.appendChild(counter);
-    }
-    
-    counter.textContent = `${currentLength}/${maxLength} 字符`;
-    counter.className = remaining < 50 ? 'form-text text-end text-warning' : 'form-text text-end text-muted';
-    
-    if (remaining < 0) {
-        counter.className = 'form-text text-end text-danger';
-    }
+// 清空表单
+document.getElementById('replyModal').addEventListener('hidden.bs.modal', function () {
+    document.getElementById('reply_content').value = '';
 });
 </script>
 
 <style>
-.border-dashed {
-    border-style: dashed !important;
-}
-
 .card {
-    transition: transform 0.2s ease-in-out;
+    transition: box-shadow 0.2s ease;
 }
 
 .card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.reply-management {
+    transition: all 0.2s ease;
+}
+
+.btn {
+    transition: all 0.2s ease;
 }
 </style>
 {% endblock %}

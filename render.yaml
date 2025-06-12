@@ -1,6 +1,17 @@
 services:
   - type: web
-    name: restaurant-management
+    name: restaurant-management-system
     env: python
-    buildCommand: ""
-    startCommand: gunicorn app:app
+    buildCommand: pip install -r requirements.txt
+    startCommand: python run.py
+    envVars:
+      - key: MYSQL_HOST
+        value: 3306
+      - key: MYSQL_USER
+        value: root
+      - key: MYSQL_PASSWORD
+        value: 2019010911Cyh__
+      - key: MYSQL_DB
+        value: restaurant_db
+      - key: SECRET_KEY
+        generateValue: true

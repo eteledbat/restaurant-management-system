@@ -16,7 +16,7 @@
                     <small class="text-muted">评分: {{ review.rating }}/10 | 发表时间: {{ review.review_time.strftime('%Y-%m-%d %H:%M') }}</small>
                 </div>
                 <div>
-                    <button class="btn btn-sm btn-outline-primary" onclick="editReview({{ review.review_id }}, {{ review.comment|tojson }}, {{ review.rating }})">编辑</button>
+                    <a href="{{ url_for('review.edit_review', review_id=review.review_id) }}" class="btn btn-sm btn-outline-primary">编辑</a>
                     <form method="POST" action="{{ url_for('review.delete_review', review_id=review.review_id) }}" style="display: inline;" onsubmit="return confirm('确定要删除这条评论吗？')">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                         <button type="submit" class="btn btn-sm btn-outline-danger">删除</button>

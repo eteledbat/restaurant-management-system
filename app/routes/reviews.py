@@ -69,14 +69,6 @@ def post_review(rest_id):
     
     cur = mysql.connection.cursor()
     try:
-        # 检查用户是否已经对该餐厅发表过评论
-        cur.execute("SELECT COUNT(*) as count FROM reviews WHERE user_id = %s AND rest_id = %s", 
-                   (current_user.id, rest_id))
-        existing_count = cur.fetchone()['count']
-        
-        if existing_count > 0:
-            flash('您已经对该餐厅发表过评论，请编辑现有评论', 'warning')
-            return redirect(url_for('restaurant.detail', rest_id=rest_id))
         
         # 插入新评论
         cur.execute("""

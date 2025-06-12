@@ -4,6 +4,7 @@ from app import mysql
 import os
 from werkzeug.utils import secure_filename
 from flask import current_app
+import uuid  
 
 # 在文件顶部添加允许的文件扩展名
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
@@ -393,54 +394,74 @@ def add_reply():
     review_id = request.form.get('review_id')
     reply_content = request.form.get('reply_content', '').strip()
     
+    # 获取来源页面
+    referer = request.headers.get('Referer', '')
+    print(f"来源页面: {referer}")  # 调试输出
+    
     if not review_id or not reply_content:
         flash('回复内容不能为空', 'error')
-        return redirect(url_for('merchant.replies'))
+        return redirect(referer) if referer else redirect(url_for('merchant.replies'))
     
     if len(reply_content) > 1000:
         flash('回复内容不能超过1000个字符', 'error')
-        return redirect(url_for('merchant.replies'))
+        return redirect(referer) if referer else redirect(url_for('merchant.replies'))
     
     cur = mysql.connection.cursor()
     try:
-        # 验证权限：确保这个评论是对该商家管理的餐厅的评论
+        # 验证权限并获取餐厅信息
         cur.execute("""
-            SELECT rv.review_id, rest.name as restaurant_name
+            SELECT rv.review_id, rest.name as restaurant_name, rest.rest_id
             FROM Reviews rv
             JOIN Restaurants rest ON rv.rest_id = rest.rest_id
             JOIN MerchantRestaurant mr ON rest.rest_id = mr.restaurant_id
             WHERE rv.review_id = %s AND mr.merchant_id = %s
         """, (review_id, current_user.id))
-        
+
         review = cur.fetchone()
         if not review:
             flash('评论不存在或您无权回复', 'error')
-            return redirect(url_for('merchant.replies'))
-        
+            return redirect(referer) if referer else redirect(url_for('merchant.replies'))
+
+        rest_id = review['rest_id']
+
         # 检查是否已经回复过
         cur.execute("SELECT reply_id FROM Replies WHERE review_id = %s", (review_id,))
         existing_reply = cur.fetchone()
         
         if existing_reply:
-            flash('您已经回复过这条评论了', 'warning')
-            return redirect(url_for('merchant.replies'))
+            flash('该评论已有回复，每个评论只能回复一次！如需修改回复内容，请编辑现有回复。', 'error')
+            return redirect(referer) if referer else redirect(url_for('merchant.replies'))
         
         # 添加回复
         cur.execute("""
-            INSERT INTO Replies (review_id, content, reply_time)
-            VALUES (%s, %s, CURRENT_TIMESTAMP)
-        """, (review_id, reply_content))
+            INSERT INTO Replies (review_id, rest_id, content, reply_time)
+            VALUES (%s, %s, %s, NOW())
+        """, (review_id, rest_id, reply_content))
         
         mysql.connection.commit()
         flash('回复发送成功', 'success')
         
+        # 根据来源页面决定重定向
+        if referer and '/restaurant/detail/' in referer:
+            # 如果来自餐厅详情页，返回详情页
+            return redirect(url_for('restaurant.detail', rest_id=rest_id))
+        else:
+            # 否则返回回复管理页
+            return redirect(url_for('merchant.replies'))
+        
     except Exception as e:
         mysql.connection.rollback()
-        flash(f'回复失败: {str(e)}', 'error')
+        print(f"添加回复失败: {e}")
+        
+        # 检查是否是重复键错误
+        if "Duplicate entry" in str(e) and "review_id" in str(e):
+            flash('该评论已有回复，每个评论只能回复一次！', 'error')
+        else:
+            flash('回复失败，请重试', 'error')
+            
+        return redirect(referer) if referer else redirect(url_for('merchant.replies'))
     finally:
         cur.close()
-    
-    return redirect(url_for('merchant.replies'))
 
 # 删除回复
 @merchant_bp.route('/delete_reply/<int:reply_id>', methods=['POST'])
@@ -591,8 +612,72 @@ def update_restaurant(rest_id):
     finally:
         cur.close()
 
-def allowed_file(filename):
-    """检查文件扩展名是否允许"""
-    ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
-    return '.' in filename and \
-           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+# 从餐厅详情页面回复评论
+@merchant_bp.route('/reply_review', methods=['POST'])
+@login_required
+def reply_review():
+    """商家回复评论（从餐厅详情页面）"""
+    if current_user.user_type != 'merchant':
+        flash('只有商家可以回复评论', 'error')
+        return redirect(url_for('main.index'))
+        
+    review_id = request.form.get('review_id')
+    content = request.form.get('content', '').strip()
+    
+    if not content:
+        flash('回复内容不能为空', 'error')
+        return redirect(request.referrer or url_for('main.index'))
+    
+    if len(content) > 1000:
+        flash('回复内容不能超过1000个字符', 'error')
+        return redirect(request.referrer or url_for('main.index'))
+    
+    cur = mysql.connection.cursor()
+    try:
+        # 验证评论是否属于商家的餐厅
+        cur.execute("""
+            SELECT r.review_id, rest.name, rest.rest_id 
+            FROM Reviews r
+            JOIN Restaurants rest ON r.rest_id = rest.rest_id
+            JOIN MerchantRestaurant mr ON rest.rest_id = mr.restaurant_id
+            WHERE r.review_id = %s AND mr.merchant_id = %s
+        """, (review_id, current_user.id))
+        
+        review = cur.fetchone()
+        if not review:
+            flash('无权回复此评论', 'error')
+            return redirect(request.referrer or url_for('main.index'))
+        
+        # 检查是否已经回复过
+        cur.execute("SELECT reply_id FROM Replies WHERE review_id = %s", (review_id,))
+        existing_reply = cur.fetchone()
+        
+        if existing_reply:
+            flash('您已经回复过这条评论了，每个评论只能回复一次！', 'warning')
+            return redirect(url_for('restaurant.detail', rest_id=review['rest_id']))
+        
+        # 插入新回复
+        cur.execute("""
+            INSERT INTO Replies (review_id, merchant_id, content, reply_time) 
+            VALUES (%s, %s, %s, NOW())
+        """, (review_id, current_user.id, content))
+        
+        mysql.connection.commit()
+        flash('回复成功', 'success')
+        
+        # 重定向到餐厅详情页面
+        return redirect(url_for('restaurant.detail', rest_id=review['rest_id']))
+        
+    except Exception as e:
+        mysql.connection.rollback()
+        print(f"回复失败: {e}")
+        
+        # 检查是否是重复键错误
+        if "Duplicate entry" in str(e) and "review_id" in str(e):
+            flash('该评论已有回复，每个评论只能回复一次！', 'error')
+        else:
+            flash('回复失败，请重试', 'error')
+            
+        return redirect(request.referrer or url_for('main.index'))
+    finally:
+        cur.close()

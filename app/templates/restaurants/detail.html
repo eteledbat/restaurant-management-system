@@ -122,25 +122,59 @@
                     
                     <!-- 商家回复区域 -->
                     {% if review.replies %}
-                    {% for reply in review.replies %}
-                    <div class="ms-4 mt-2 p-2 bg-light rounded">
-                        <small class="text-muted">商家回复 ({{ reply.reply_time.strftime('%Y-%m-%d %H:%M') }}):</small>
-                        <p class="mb-0">{{ reply.content }}</p>
-                    </div>
-                    {% endfor %}
+                        {% for reply in review.replies %}
+                        <div class="ms-4 mt-2 p-3 bg-light rounded border-start border-3 border-info">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div class="flex-grow-1">
+                                    <div class="d-flex align-items-center mb-1">
+                                        <i class="fas fa-store text-info me-2"></i>
+                                        <small class="text-muted fw-bold">商家回复</small>
+                                        <small class="text-muted ms-2">({{ reply.reply_time.strftime('%Y-%m-%d %H:%M') }})</small>
+                                    </div>
+                                    <p class="mb-0">{{ reply.content }}</p>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
                     {% endif %}
-                    
+
                     <!-- 商家回复表单 -->
                     {% if current_user.is_authenticated and current_user.user_type == 'merchant' %}
-                    <div class="ms-4 mt-2">
-                        <form method="POST" action="{{ url_for('review.reply_review', review_id=review.review_id) }}">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                            <div class="input-group input-group-sm">
-                                <input type="text" class="form-control" name="reply_content" placeholder="商家回复..." required>
-                                <button type="submit" class="btn btn-outline-secondary">回复</button>
+                        {% if not review.replies %}
+                            <!-- 只有当没有回复时才显示回复表单 -->
+                            <div class="ms-4 mt-2">
+                                <form method="POST" 
+                                      action="{{ url_for('merchant.add_reply') }}" 
+                                      onsubmit="return validateMerchantReply(this, {{ review.review_id }})">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                    <input type="hidden" name="review_id" value="{{ review.review_id }}">
+                                    
+                                    <div class="mb-2">
+                                        <div class="input-group input-group-sm">
+                                            <textarea class="form-control" 
+                                                    name="reply_content" 
+                                                    placeholder="回复这条评论..." 
+                                                    rows="2" 
+                                                    maxlength="1000" 
+                                                    required
+                                                    oninput="updateReplyCharCounter(this)"></textarea>
+                                            <button type="submit" class="btn btn-outline-primary">
+                                                <i class="fas fa-reply"></i> 回复
+                                            </button>
+                                        </div>
+                                        <div class="d-flex justify-content-between mt-1">
+                                            <small class="text-warning">
+                                                <i class="fas fa-exclamation-triangle me-1"></i>
+                                                每个评论只能回复一次
+                                            </small>
+                                            <small class="text-muted reply-char-counter">0/1000 字符</small>
+                                        </div>
+                                    </div>
+                                </form>
                             </div>
-                        </form>
-                    </div>
+                        {% else %}
+                            
+                        {% endif %}
                     {% endif %}
                 </div>
                 {% endfor %}
@@ -236,6 +270,176 @@ function recommendDish(dishId) {
         console.error('Error:', error);
         alert('操作失败');
     });
+    // 存储已回复的评论ID
+    const repliedReviewIds = new Set([
+        {% for review in reviews %}
+            {% if review.replies %}{{ review.review_id }}{% if not loop.last %},{% endif %}{% endif %}
+        {% endfor %}
+    ]);
+
+    // 验证商家回复
+    function validateMerchantReply(form, reviewId) {
+        const content = form.querySelector('textarea[name="reply_content"]').value.trim();
+        const submitBtn = form.querySelector('button[type="submit"]');
+        
+        // 检查是否已回复
+        if (repliedReviewIds.has(reviewId)) {
+            showReplyWarning('该评论已有回复，每个评论只能回复一次！');
+            return false;
+        }
+        
+        // 验证内容
+        if (!content) {
+            showReplyWarning('回复内容不能为空');
+            return false;
+        }
+        
+        if (content.length < 5) {
+            showReplyWarning('回复内容至少需要5个字符');
+            return false;
+        }
+        
+        if (content.length > 1000) {
+            showReplyWarning('回复内容不能超过1000个字符');
+            return false;
+        }
+        
+        // 确认提交
+        if (!confirm('确定要发送这条回复吗？\n\n每个评论只能回复一次，请确认回复内容。')) {
+            return false;
+        }
+        
+        // 防止重复提交
+        if (submitBtn.disabled) {
+            return false;
+        }
+        
+        // 设置提交状态
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 回复中...';
+        
+        // 乐观更新
+        repliedReviewIds.add(reviewId);
+        
+        return true;
+    }
+
+    // 显示回复警告
+    function showReplyWarning(message) {
+        // 创建或更新警告提示
+        let existingAlert = document.querySelector('.reply-warning-alert');
+        if (existingAlert) {
+            existingAlert.remove();
+        }
+        
+        const alertDiv = document.createElement('div');
+        alertDiv.className = 'alert alert-warning alert-dismissible fade show reply-warning-alert mt-2';
+        alertDiv.innerHTML = `
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        
+        // 插入到页面顶部
+        const content = document.querySelector('.row');
+        content.insertBefore(alertDiv, content.firstChild);
+        
+        // 3秒后自动消失
+        setTimeout(() => {
+            if (alertDiv.parentNode) {
+                alertDiv.remove();
+            }
+        }, 3000);
+    }
+
+    // 更新回复字符计数器
+    function updateReplyCharCounter(textarea) {
+        const maxLength = 1000;
+        const currentLength = textarea.value.length;
+        const counter = textarea.closest('.mb-2').querySelector('.reply-char-counter');
+        
+        if (counter) {
+            counter.textContent = `${currentLength}/${maxLength} 字符`;
+            
+            if (currentLength > maxLength * 0.8) {
+                counter.className = 'text-warning reply-char-counter';
+            } else if (currentLength > maxLength) {
+                counter.className = 'text-danger reply-char-counter';
+            } else {
+                counter.className = 'text-muted reply-char-counter';
+            }
+        }
+    }
+
+    // 页面加载完成后的初始化
+    document.addEventListener('DOMContentLoaded', function() {
+        // 初始化所有回复文本区域的字符计数
+        document.querySelectorAll('textarea[name="reply_content"]').forEach(textarea => {
+            updateReplyCharCounter(textarea);
+        });
+        
+        // 检查URL参数中是否有错误信息
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('reply_error')) {
+            showReplyWarning(decodeURIComponent(urlParams.get('reply_error')));
+        }
+    });
 }
 </script>
+<style>
+/* 商家回复样式 */
+.border-start {
+    border-left-width: 3px !important;
+}
+
+.reply-warning-alert {
+    position: sticky;
+    top: 20px;
+    z-index: 1050;
+    animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+    from {
+        transform: translateY(-20px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+/* 回复表单样式 */
+.input-group textarea {
+    resize: vertical;
+    min-height: 60px;
+}
+
+.reply-char-counter {
+    font-size: 0.8em;
+}
+
+/* 提交按钮状态 */
+.btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* 已回复状态样式 */
+.bg-light {
+    background-color: #f8f9fa !important;
+}
+
+.border-info {
+    border-color: #0dcaf0 !important;
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+    .ms-4 {
+        margin-left: 1rem !important;
+    }
+}
+</style>
 {% endblock %}
