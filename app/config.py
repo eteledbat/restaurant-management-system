@@ -3,6 +3,8 @@ import os
 class Config:
     # 数据库配置
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'e8274a7f4d34e4d1e1b69e6e9a0c9bcb073c9f4db13d38e8f7c5c973fa58e2c1'
+    WTF_CSRF_ENABLED = True
+    WTF_CSRF_TIME_LIMIT = 3600
     
     # MySQL 配置
     MYSQL_HOST = 'localhost'
